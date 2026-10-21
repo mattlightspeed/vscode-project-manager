@@ -1,7 +1,7 @@
 # Plan: Expose Public Extension API (saveProject / getXXXProjects / getAllProjects)
 
 > Note: Once approved, this plan file will be copied into the repository at
-> `plans/expose-public-extension-api.md` as the first implementation step (plan mode
+> [[expose-public-extension-api]] as the first implementation step (plan mode
 > cannot write outside the session folder).
 
 ## Problem
