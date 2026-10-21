@@ -47,5 +47,8 @@
     "filtered by tags": "按標籤過濾",
     "Save the workspace first to save a project": "先保存工作區以保存項目",
     "Open a folder first to save a project": "先打開一個文件夾以保存項目",
-    "Save Project": "儲存專案"
+    "Save Project": "儲存專案",
+    "{0} (missing)": "{0}（遺失）",
+    "{0} (detached)": "{0}（已分離）",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "此 worktree 的文件夾已不存在。`git worktree prune` 會刪除其記錄，除非該 worktree 已被鎖定。"
 }

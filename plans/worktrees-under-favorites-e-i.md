@@ -8,9 +8,9 @@
 - **Latest review**: 2026-10-21 11:25 UTC
 - **Latest review by**: Opus 5.5 (`claude-opus-5-5`)
 - **Review count**: 1
-- **Implemented**: —
-- **Implemented by**: —
-- **Status**: **reviewed 1×**, ready for /plan-implement; then Matt's hand-over (WF-R1)
+- **Implemented**: 2026-10-21 11:56 UTC
+- **Implemented by**: Opus 5.5 (`claude-opus-5-5`)
+- **Status**: **implemented (reviewed 1×).** Landed as specified, at 158 passing, plus one fix the plan missed: the Help and Feedback view also looked itself up by upstream's id, and activation failed until it read its own (WF-D17, Matt's call); then Matt's hand-over (WF-R1)
 
 Item ids are stable: findings **WF-F*n***, decisions **WF-D*n***, residue
 **WF-R*n***. Tests are named by the suites and titles given in *Tests*.
@@ -241,8 +241,9 @@ extension id, and cannot be carried over.**
     `project-manager.whatsNew.shown`
     (`vscode-whats-new/src/Manager.ts:47-48`).
 
-<a id="wf-f5"></a>**WF-F5. Three places name the extension by
-`alefragnani`.**
+<a id="wf-f5"></a>**WF-F5. Four places name the extension by
+`alefragnani`.** Review 1 counted three. Implementation found the fourth, the
+Help and Feedback view, which looks the extension up as well (last bullet).
 - `registerWhatsNew` passes `"alefragnani", "project-manager"`
   (`src/whats-new/commands.ts:14`). `WhatsNewManager.showPageInActivation`
   then calls `vscode.extensions.getExtension(`${publisher}.${name}`)!` and
@@ -259,8 +260,16 @@ extension id, and cannot be carried over.**
 - `name` feeds What's New's state keys (`Manager.ts:47-48`) and its logo
   path, `images/vscode-${name}-logo-readme.png` (`Manager.ts:103`).
 - `StandardLinksProvider('alefragnani.project-manager')`
-  (`src/sidebar/helpAndFeedbackView.ts:11`) only builds links, to upstream's
-  pages.
+  (`src/sidebar/helpAndFeedbackView.ts:11`) builds its links from
+  `vscode.extensions.getExtension(<that id>).packageJSON`'s `homepage` and
+  `bugs.url` (`node_modules/vscode-ext-help-and-feedback-view/lib/standardLinks.js`,
+  1.0.1). Under another publisher the lookup is `undefined`, and
+  `getGetStartedLink()` throws inside `activate()`
+  (`src/extension.ts:62`), so the extension fails to activate. Found at
+  implementation, when the Activation test failed with `Cannot read
+  properties of undefined (reading 'packageJSON')`. Fixed by WF-D17. The
+  links still lead to upstream's pages, because the manifest's `homepage`
+  and `bugs` are upstream's (`package.json:36`, `:41-43`).
 
 <a id="wf-f6"></a>**WF-F6. PR #986 maps scanned projects to their repo, the
 other direction from this plan.** It was opened 2026-09-24 and updated
@@ -441,8 +450,10 @@ behaviour, and its worktree children inherit it.
   `projectManager.configuration.tags.collapseItems.enumDescriptions.startCollapsed`,
   `package.nls.json:106`).
 - Runtime strings: `l10n/bundle.l10n.json` and all 8 language bundles have
-  the same 49 keys. Each bundle ends without a newline after its closing
-  `}`.
+  the same 49 keys. Not every bundle ends the same way (corrected at
+  implementation; review 1 said none ends with a newline): `az`, `cs` and
+  `zh-cn` end with a newline after `}`, the other six do not, and `fr` uses
+  CRLF line endings. Each file keeps its own.
 
 <a id="wf-f18"></a>**WF-F18. A setting whose key extends another setting's
 key loses its default.** Run in the test host, 1.143.0 (review 1):
@@ -646,6 +657,18 @@ section (WF-R7).
 - Four-space indentation, double quotes and semicolons.
 - `l10n.t` for runtime strings, and `%key%` for manifest strings.
 
+<a id="wf-d17"></a>**WF-D17. The Help and Feedback view looks the extension
+up by its own id (Matt, 2026-10-21, at implementation).**
+- `new StandardLinksProvider(context.extension.id)`, in place of upstream's
+  literal id (WF-F5). `registerHelpAndFeedbackView` already receives
+  `context`.
+- It mirrors `commands.ts` reading publisher and name from the manifest, so
+  it holds under either id and goes in commit 2, with the rest of the fork's
+  identity.
+- Rejected: the literal `'mattlightspeed.project-manager'`, which breaks again
+  if the id changes and differs needlessly from upstream; and stopping for a
+  fresh review, since the fix is one line and the Activation test guards it.
+
 ## Specification
 
 ### Files
@@ -659,6 +682,7 @@ section (WF-R7).
 | `src/sidebar/providers.ts` | disposes the provider; focus refresh; remembers a favorite's expansion |
 | `src/extension.ts` | Refresh Projects refreshes Favorites; reacts to `projectManager.worktrees` settings |
 | `src/whats-new/commands.ts` | publisher and name from the manifest |
+| `src/sidebar/helpAndFeedbackView.ts` | links built from the extension's own id (WF-D17) |
 | `src/test/runTest.ts` | headless on a Linux host with no display |
 | `package.json` | publisher; What's New menu id; two settings; six menu entries |
 | `package.nls.json` + 8 `package.nls.<lang>.json` | six setting strings |
@@ -1144,6 +1168,12 @@ becomes `.registerContentProvider(publisher, name, provider)`, preceded in
 `ExtensionContext.extension` exists in VS Code ≥ 1.55, and `engines.vscode`
 is `^1.78.0` (`package.json:8`).
 
+### `src/sidebar/helpAndFeedbackView.ts`
+
+Added at implementation (WF-D17). Line 11's
+`new StandardLinksProvider('alefragnani.project-manager')` becomes
+`new StandardLinksProvider(context.extension.id)`.
+
 ### `src/test/runTest.ts`
 
 In `main()`, inside the `try`, before `extensionDevelopmentPath`:
@@ -1253,9 +1283,10 @@ mapped to itself as the file does:
   "project".
 - Keep `Git`, `worktree`, `git worktree prune` and `{0}` as they are.
 - Do not translate keys.
-- The files keep four-space indentation and UTF-8. The `l10n` bundles keep
-  ending without a newline after `}` (WF-F17). Adding at the end means a
-  comma after what is now the last entry.
+- The files keep four-space indentation and UTF-8. Each keeps its own line
+  endings and its own final newline or lack of one (WF-F17). Adding at the
+  end, or after an anchor that is the last entry (`cs`, `ru`), means a comma
+  after what is now the last entry.
 - `manifest.test.ts` checks that every key is present and non-empty.
 
 ### `src/test/suite/mocks/MockMemento.ts`
@@ -1277,6 +1308,7 @@ passing count shown.
 2. **Fork identity** (WF-D2, WF-F5):
    - `package.json:6` and `:660`;
    - `src/whats-new/commands.ts`;
+   - `src/sidebar/helpAndFeedbackView.ts` (WF-D17);
    - `extension.test.ts`: lookup by path, plus the What's New test;
    - create `manifest.test.ts` with M4.
 
@@ -1747,6 +1779,8 @@ Matt's own terminal it needs nothing extra.
      are and no more: `src/test/suite/extension.test.ts:18` and `:22`, and
      `src/test/suite/mocks/MockMemento.ts:9` and `:15`, all
      `no-explicit-any` (run in review 1). The new `:22` keeps its one `any`.
+     MockMemento's two move to `:10` and `:16`, below the added `path`
+     import.
    - No other file this plan changes has a warning today, and none gains one.
 2. `npm run build`: `webpack … compiled successfully`.
 3. `npm test`, which also runs `pretest`'s compile and lint: `158 passing`,
@@ -1864,11 +1898,17 @@ then `code --install-extension alefragnani.project-manager`, then reload.
 The implementer does not commit. Matt commits on `master`, in this order:
 1. **Run the VS Code tests headless on Linux**: `src/test/runTest.ts`.
 2. **Fork identity: publisher mattlightspeed**:
-   - `package.json`: the `:6` and `:660` hunks only (`git add -p package.json`);
+   - `package.json`: the `publisher` and `extension/context` lines only
+     (`git add -p package.json`). The second sits in the same hunk as the
+     six new menu entries, six lines below them; answer `y` to the first
+     hunk, then `s` to split the second, `n` to the menu entries, `y` to the
+     `extension/context` line, and `n` to the rest;
    - `src/whats-new/commands.ts`;
+   - `src/sidebar/helpAndFeedbackView.ts` (WF-D17);
    - `src/test/suite/extension.test.ts`.
 3. **Show linked worktrees under their favorite**: the rest. That is
-   `src/utils/worktrees.ts`, `src/sidebar/*`, `src/extension.ts`, the
+   `src/utils/worktrees.ts`, `src/sidebar/*` except `helpAndFeedbackView.ts`,
+   `src/extension.ts`, the
    remaining `package.json` hunks, `package.nls*.json`, `l10n/*`,
    `src/test/suite/mocks/*`, and the five new test files.
 4. **Plans**: `plans/`, with this plan marked implemented and the register
@@ -2041,6 +2081,54 @@ What changed in the plan:
 - **Summary**: rewritten.
 - **Gates**: unchanged. The one `writing` row is met. The body names nothing
   else that must come before implementing.
+
+## Implementation (2026-10-21)
+
+Implemented on `master` at `53946e9` (that commit only renames this plan
+from its stub), by Opus 5.5, in the order of *Order of work*. Nothing is
+committed (WF-D13).
+
+**Run, and how it came out:**
+- `npm test` at each step, outside Claude's sandbox: 85, 87, 111, 122, 134,
+  157 and 158 passing, as each step expected, with no failure left at any
+  step's end. Step 2 first gave 84 passing and 3 failing: the Activation,
+  Public API and What's New tests, all
+  `Cannot read properties of undefined (reading 'packageJSON')` at
+  `StandardLinksProvider.getGetStartedLink`. That is WF-F5's fourth place,
+  fixed by WF-D17, after which step 2 gave 87.
+- Step 1's runner: with `ELECTRON_RUN_AS_NODE=1` inherited and no `DISPLAY`,
+  plain `npm test` ran (85 passing), so the headless branch is exercised on
+  this server.
+- L17 ran against git 2.43.0, not skipped.
+- *Verification* 1-5: lint 0 errors and 52 warnings, the same files as
+  before; `npm run build` compiled; 158 passing; the diff touches *Files*
+  plus `plans/`, and the eight new files are untracked; the VSIX prints
+  `mattlightspeed project-manager 13.1.1`, with 0 `plans/`/`AGENTS.md`
+  entries, 0 dotfiles and 1 `extension/dist/extension.js` (110 files,
+  2.14 MB).
+- *Commits*, checked in scratch copies of the tree: commit 1 alone gives 85
+  passing; commits 1 and 2 give 86, which is 85 plus the What's New test,
+  since M4 goes in commit 3; all three give 158. Commit 3 alone on HEAD,
+  under upstream's id, gives 157, which is everything but the What's New
+  test. That run also had commit 1's runner, which it needs only to run
+  headless here.
+
+**Where the implementation went beyond the text:**
+- WF-D17 and `src/sidebar/helpAndFeedbackView.ts`, as above.
+- WF-F17 was wrong about the bundles' ends. Each locale file kept its own
+  line endings and final newline, so each bundle's diff is 3 lines added
+  and 1 changed, and `fr` stays CRLF.
+- M3 also asserts that exactly six entries name `WorktreeNodeKind`, since a
+  set comparison alone would let a duplicated row pass.
+- The two `package.json` edits for commit 2 share a hunk with the menu
+  entries (*Commits*).
+
+**Not checked:**
+- That each new test fails before its step: none was run against the tree
+  as it stood before its step. Step 2's three failures came from WF-F5's
+  fourth place, not from what the What's New test targets.
+- Anything in *Assumed, not verified*, and the hand-over's manual checks,
+  which need Matt's editor.
 
 ## Tests to remove after implementation
 

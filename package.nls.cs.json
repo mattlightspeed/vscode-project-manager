@@ -92,5 +92,11 @@
     "projectManager.configuration.tags.collapseItems.enumDescriptions.alwaysExpanded": "Skupiny značek jsou vždy rozbalené.",
     "projectManager.configuration.tags.collapseItems.enumDescriptions.alwaysCollapsed": "Skupiny značek jsou vždy sbalené.",
     "projectManager.configuration.tags.collapseItems.enumDescriptions.startExpanded": "Skupiny značek jsou na začátku rozbalené, ale pamatují si váš poslední stav rozbalení/sbalení.",
-    "projectManager.configuration.tags.collapseItems.enumDescriptions.startCollapsed": "Skupiny značek jsou na začátku sbalené, ale pamatují si váš poslední stav rozbalení/sbalení."
+    "projectManager.configuration.tags.collapseItems.enumDescriptions.startCollapsed": "Skupiny značek jsou na začátku sbalené, ale pamatují si váš poslední stav rozbalení/sbalení.",
+    "projectManager.configuration.worktrees.showInFavorites.description": "Zobrazit propojené worktree Git každého oblíbeného projektu pod ním v zobrazení Oblíbené.",
+    "projectManager.configuration.worktrees.collapseItems.description": "Určuje, zda jsou oblíbené projekty s worktree v zobrazení Oblíbené na začátku rozbalené nebo sbalené a zda si pamatují svůj stav.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded": "Oblíbené projekty s worktree jsou vždy rozbalené.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Oblíbené projekty s worktree jsou vždy sbalené.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Oblíbené projekty s worktree jsou na začátku rozbalené, ale pamatují si váš poslední stav rozbalení/sbalení.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Oblíbené projekty s worktree jsou na začátku sbalené, ale pamatují si váš poslední stav rozbalení/sbalení."
 }

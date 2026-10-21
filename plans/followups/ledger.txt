@@ -1,0 +1,6 @@
+# Residue ledger: one line per implemented plan whose residue has been processed into
+# this repo's follow-up register, sorted by stem.
+#   <stem> <YYYY-MM-DD processed> <backfill|implement> <entries>
+# entries counts month-file lines naming the plan as source; a plan merged into an
+# earlier plan's entry after "; also" counts 0. Add lines with plan_residue.py record.
+worktrees-under-favorites 2026-10-21 implement 21

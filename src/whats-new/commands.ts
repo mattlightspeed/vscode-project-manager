@@ -10,8 +10,9 @@ import { ProjectManagerContentProvider, ProjectManagerSocialMediaProvider } from
 
 export function registerWhatsNew() {
     const provider = new ProjectManagerContentProvider();
+    const { publisher, name } = Container.context.extension.packageJSON;
     const viewer = new WhatsNewManager(Container.context)
-        .registerContentProvider("alefragnani", "project-manager", provider)
+        .registerContentProvider(publisher, name, provider)
         .registerSocialMediaProvider(new ProjectManagerSocialMediaProvider());
     viewer.showPageInActivation();
     Container.context.subscriptions.push(commands.registerCommand("projectManager.whatsNew", () => viewer.showPage()));

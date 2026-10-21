@@ -72,17 +72,23 @@ export class Providers {
 
     private registerStorageTreeViewListeners() {
         Container.context.subscriptions.push(
+            this.storageProvider,
             this.storageTreeView.onDidExpandElement(async event => {
                 await this.handleStorageTreeViewExpansionChange(event, "expanded");
             }),
             this.storageTreeView.onDidCollapseElement(async event => {
                 await this.handleStorageTreeViewExpansionChange(event, "collapsed");
             }),
-            // Refresh git branch info when window gains focus and sidebar is visible
+            // Refresh git branch and worktree info when window gains focus and sidebar is visible
             vscode.window.onDidChangeWindowState(async (state) => {
-                const showGitBranch = vscode.workspace.getConfiguration("projectManager").get<string>("git.showBranchName", "never");
-                if (state.focused && this.storageTreeView.visible && (showGitBranch === "onlyInSideBar" || showGitBranch === "always")) {
+                if (!state.focused || !this.storageTreeView.visible) {
+                    return;
+                }
+                if (StorageProvider.refreshesOnWindowFocus()) {
                     this.storageProvider.refresh();
+                }
+                const showGitBranch = vscode.workspace.getConfiguration("projectManager").get<string>("git.showBranchName", "never");
+                if (showGitBranch === "onlyInSideBar" || showGitBranch === "always") {
                     this.gitProvider.refresh();
                 }
             }),
@@ -98,6 +104,8 @@ export class Providers {
                 const tagId = (element.label as string) || (element.description as string) || "";
                 await StorageProvider.setTagExpanded(tagId, state === "expanded");
             }
+        } else if (element instanceof ProjectNode) {
+            await StorageProvider.rememberWorktreesExpansion(element.preview.path, state === "expanded");
         }
     }
 

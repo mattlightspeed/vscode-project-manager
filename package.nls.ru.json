@@ -92,5 +92,11 @@
     "projectManager.configuration.tags.collapseItems.enumDescriptions.alwaysExpanded": "Группы тегов всегда развёрнуты.",
     "projectManager.configuration.tags.collapseItems.enumDescriptions.alwaysCollapsed": "Группы тегов всегда свёрнуты.",
     "projectManager.configuration.tags.collapseItems.enumDescriptions.startExpanded": "Группы тегов изначально развёрнуты, но запоминают последнее состояние свёртывания/разворачивания.",
-    "projectManager.configuration.tags.collapseItems.enumDescriptions.startCollapsed": "Группы тегов изначально свёрнуты, но запоминают последнее состояние свёртывания/разворачивания."
+    "projectManager.configuration.tags.collapseItems.enumDescriptions.startCollapsed": "Группы тегов изначально свёрнуты, но запоминают последнее состояние свёртывания/разворачивания.",
+    "projectManager.configuration.worktrees.showInFavorites.description": "Показывать связанные worktree Git каждого избранного проекта под ним в представлении \"Избранное\".",
+    "projectManager.configuration.worktrees.collapseItems.description": "Определяет, развёрнуты или свёрнуты изначально избранные проекты с worktree в представлении \"Избранное\" и запоминается ли их состояние.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded": "Избранные проекты с worktree всегда развёрнуты.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Избранные проекты с worktree всегда свёрнуты.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Избранные проекты с worktree изначально развёрнуты, но запоминают последнее состояние свёртывания/разворачивания.",
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Избранные проекты с worktree изначально свёрнуты, но запоминают последнее состояние свёртывания/разворачивания."
 }

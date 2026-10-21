@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 
 export class MockMemento implements vscode.Memento {
@@ -24,6 +25,6 @@ export class MockMemento implements vscode.Memento {
 
 export function createMockContext(): vscode.ExtensionContext {
     const globalState = new MockMemento();
-    return { globalState } as unknown as vscode.ExtensionContext;
+    return { globalState, extensionUri: vscode.Uri.file(path.resolve(__dirname, "..", "..", "..", "..", "..")) } as unknown as vscode.ExtensionContext;
 }
 

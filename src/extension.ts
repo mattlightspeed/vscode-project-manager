@@ -104,7 +104,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // register commands (here, because it needs to be used right below if an invalid JSON is present)
     vscode.commands.registerCommand("projectManager.saveProject", () => saveProject());
-    vscode.commands.registerCommand("projectManager.refreshProjects", () => refreshProjects(true, true));
+    vscode.commands.registerCommand("projectManager.refreshProjects", () => {
+        providerManager.storageProvider.refresh();
+        refreshProjects(true, true);
+    });
     locators.registerCommands();
     vscode.commands.registerCommand("projectManager.editProjects", () => editProjects());
     vscode.commands.registerCommand("projectManager.listProjects", () => listProjects(false));
@@ -204,6 +207,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         if (cfg.affectsConfiguration("projectManager.tags.collapseItems")) {
             await StorageProvider.resetTagExpansionState();
+            providerManager.refreshStorageTreeView();
+        }
+
+        if (cfg.affectsConfiguration("projectManager.worktrees.collapseItems")) {
+            await StorageProvider.resetWorktreesExpansionState();
+        }
+
+        if (cfg.affectsConfiguration("projectManager.worktrees")) {
             providerManager.refreshStorageTreeView();
         }
 

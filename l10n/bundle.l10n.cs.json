@@ -47,5 +47,8 @@
     "filtered by tags": "filtrováno podle značek",
     "Save the workspace first to save a project": "Chcete-li uložit projekt, nejprve uložte pracovní prostor",
     "Open a folder first to save a project": "Chcete-li uložit projekt, nejprve otevřete složku",
-    "Save Project": "Uložit projekt"
+    "Save Project": "Uložit projekt",
+    "{0} (missing)": "{0} (chybí)",
+    "{0} (detached)": "{0} (odpojeno)",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Složka tohoto worktree již neexistuje. `git worktree prune` odstraní jeho záznam, pokud worktree není uzamčen."
 }

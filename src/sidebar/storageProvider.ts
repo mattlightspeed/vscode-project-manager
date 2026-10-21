@@ -11,8 +11,10 @@ import { PathUtils } from "../utils/path";
 import { isRemotePath } from "../utils/remote";
 import { sortProjects } from "../utils/sorter";
 import { getGitBranch } from "../utils/git";
+import { getGitCommonDir, getLinkedWorktrees } from "../utils/worktrees";
 import { NO_TAGS_DEFINED } from "./constants";
-import { NoTagNode, ProjectNode, TagNode } from "./nodes";
+import { NoTagNode, ProjectNode, TagNode, WorktreeNode } from "./nodes";
+import { WorktreeWatcher } from "./worktreeWatcher";
 
 interface ProjectInQuickPick {
     label: string;
@@ -23,28 +25,26 @@ interface ProjectInQuickPick {
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ProjectInQuickPickList extends Array<ProjectInQuickPick> { }
 
-export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | TagNode> {
+export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | TagNode>, vscode.Disposable {
 
     public readonly onDidChangeTreeData: vscode.Event<ProjectNode | TagNode | void>;
 
     private projectSource: ProjectStorage;
     private internalOnDidChangeTreeData: vscode.EventEmitter<ProjectNode | TagNode | void> = new vscode.EventEmitter<ProjectNode | void>();
     private static readonly TAGS_EXPANSION_STATE_KEY = "projectsExplorerFavorites.tagsExpansionState";
+    private static readonly WORKTREES_EXPANSION_STATE_KEY = "projectsExplorerFavorites.worktreesExpansionState";
+    private readonly worktreeWatcher = new WorktreeWatcher(() => this.refresh());
 
     constructor(projectSource: ProjectStorage) {
         this.projectSource = projectSource;
         this.onDidChangeTreeData = this.internalOnDidChangeTreeData.event;
     }
 
-    private static getTagExpansionState(): Record<string, boolean> {
-        return Container.context.globalState.get<Record<string, boolean>>(StorageProvider.TAGS_EXPANSION_STATE_KEY, {});
+    private static getExpansionState(stateKey: string): Record<string, boolean> {
+        return Container.context.globalState.get<Record<string, boolean>>(stateKey, {});
     }
 
-    public static async resetTagExpansionState(): Promise<void> {
-        await Container.context.globalState.update(StorageProvider.TAGS_EXPANSION_STATE_KEY, {});
-    }
-
-    public static getTagCollapsibleState(tagId: string, behavior: string): vscode.TreeItemCollapsibleState {
+    private static getCollapsibleState(stateKey: string, id: string, behavior: string): vscode.TreeItemCollapsibleState {
         switch (behavior) {
             case "alwaysExpanded":
                 return vscode.TreeItemCollapsibleState.Expanded;
@@ -52,8 +52,8 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
                 return vscode.TreeItemCollapsibleState.Collapsed;
             case "startExpanded":
             case "startCollapsed": {
-                const expansionState = StorageProvider.getTagExpansionState();
-                const isExpanded = expansionState[ tagId ];
+                const expansionState = StorageProvider.getExpansionState(stateKey);
+                const isExpanded = expansionState[ id ];
                 if (isExpanded === undefined) {
                     return behavior === "startExpanded" ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.Collapsed;
                 }
@@ -64,10 +64,50 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
         }
     }
 
+    private static async setExpanded(stateKey: string, id: string, expanded: boolean): Promise<void> {
+        const expansionState = StorageProvider.getExpansionState(stateKey);
+        const newExpansionState = { ...expansionState, [ id ]: expanded };
+        await Container.context.globalState.update(stateKey, newExpansionState);
+    }
+
+    public static async resetTagExpansionState(): Promise<void> {
+        await Container.context.globalState.update(StorageProvider.TAGS_EXPANSION_STATE_KEY, {});
+    }
+
+    public static getTagCollapsibleState(tagId: string, behavior: string): vscode.TreeItemCollapsibleState {
+        return StorageProvider.getCollapsibleState(StorageProvider.TAGS_EXPANSION_STATE_KEY, tagId, behavior);
+    }
+
     public static async setTagExpanded(tagId: string, expanded: boolean): Promise<void> {
-        const expansionState = StorageProvider.getTagExpansionState();
-        const newExpansionState = { ...expansionState, [ tagId ]: expanded };
-        await Container.context.globalState.update(StorageProvider.TAGS_EXPANSION_STATE_KEY, newExpansionState);
+        await StorageProvider.setExpanded(StorageProvider.TAGS_EXPANSION_STATE_KEY, tagId, expanded);
+    }
+
+    public static showsWorktrees(): boolean {
+        return vscode.workspace.getConfiguration("projectManager").get<boolean>("worktrees.showInFavorites", true);
+    }
+
+    public static refreshesOnWindowFocus(): boolean {
+        const showGitBranch = vscode.workspace.getConfiguration("projectManager").get<string>("git.showBranchName", "never");
+        return showGitBranch === "onlyInSideBar" || showGitBranch === "always" || StorageProvider.showsWorktrees();
+    }
+
+    public static async resetWorktreesExpansionState(): Promise<void> {
+        await Container.context.globalState.update(StorageProvider.WORKTREES_EXPANSION_STATE_KEY, {});
+    }
+
+    public static getWorktreesCollapsibleState(projectPath: string): vscode.TreeItemCollapsibleState {
+        if (!StorageProvider.showsWorktrees() || isRemotePath(projectPath) || getLinkedWorktrees(projectPath).length === 0) {
+            return vscode.TreeItemCollapsibleState.None;
+        }
+        const behavior = vscode.workspace.getConfiguration("projectManager").get<string>("worktrees.collapseItems", "startCollapsed");
+        return StorageProvider.getCollapsibleState(StorageProvider.WORKTREES_EXPANSION_STATE_KEY, projectPath, behavior);
+    }
+
+    public static async rememberWorktreesExpansion(projectPath: string, expanded: boolean): Promise<void> {
+        const behavior = vscode.workspace.getConfiguration("projectManager").get<string>("worktrees.collapseItems", "startCollapsed");
+        if (behavior === "startExpanded" || behavior === "startCollapsed") {
+            await StorageProvider.setExpanded(StorageProvider.WORKTREES_EXPANSION_STATE_KEY, projectPath, expanded);
+        }
     }
 
     public refresh(): void {
@@ -79,6 +119,10 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
     }
 
     public getChildren(element?: ProjectNode | TagNode): Thenable<ProjectNode[] | TagNode[]> {
+
+        if (element instanceof ProjectNode) {
+            return Promise.resolve(this.getWorktreeNodes(element));
+        }
 
         // loop !!!
         return new Promise(resolve => {
@@ -110,7 +154,7 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
                     const projectPath = PathUtils.expandHomePath(prj.description);
                     const gitBranch = (showGitBranch === "always" || showGitBranch === "onlyInSideBar") ? getGitBranch(projectPath) : undefined;
 
-                    nodes.push(new ProjectNode(prj.label, vscode.TreeItemCollapsibleState.None,
+                    nodes.push(new ProjectNode(prj.label, StorageProvider.getWorktreesCollapsibleState(projectPath),
                         iconFavorites, {
                             name: prj.label,
                             path: projectPath,
@@ -125,6 +169,8 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
                 resolve(nodes);
 
             } else { // ROOT
+
+                this.watchFavoritesWorktrees();
 
                 // no project saved yet, returns [] `empty`...
                 if (this.projectSource.length() === 0) {
@@ -192,7 +238,7 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
                     const projectPath = PathUtils.expandHomePath(prj.description);
                     const gitBranch = (showGitBranch === "always" || showGitBranch === "onlyInSideBar") ? getGitBranch(projectPath) : undefined;
 
-                    nodes.push(new ProjectNode(prj.label, vscode.TreeItemCollapsibleState.None,
+                    nodes.push(new ProjectNode(prj.label, StorageProvider.getWorktreesCollapsibleState(projectPath),
                         iconFavorites, {
                             name: prj.label,
                             path: projectPath,
@@ -208,6 +254,36 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
                 resolve(nodes);
             }
         });
+    }
+
+    private getWorktreeNodes(element: ProjectNode): WorktreeNode[] {
+        const projectPath = element.preview.path;
+        if (element instanceof WorktreeNode || !StorageProvider.showsWorktrees() || isRemotePath(projectPath)) {
+            return [];
+        }
+        const profile = element.command.arguments[ 2 ];
+        return getLinkedWorktrees(projectPath)
+            .map(worktree => new WorktreeNode(worktree, projectPath, profile))
+            .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base", numeric: true })
+                || a.preview.path.localeCompare(b.preview.path));
+    }
+
+    private watchFavoritesWorktrees(): void {
+        const commonDirs: string[] = [];
+        if (StorageProvider.showsWorktrees()) {
+            for (const project of <ProjectInQuickPickList>this.projectSource.map()) {
+                const projectPath = PathUtils.expandHomePath(project.description);
+                const commonDir = isRemotePath(projectPath) ? undefined : getGitCommonDir(projectPath);
+                if (commonDir) {
+                    commonDirs.push(commonDir);
+                }
+            }
+        }
+        this.worktreeWatcher.watch(commonDirs);
+    }
+
+    public dispose(): void {
+        this.worktreeWatcher.dispose();
     }
 
 }

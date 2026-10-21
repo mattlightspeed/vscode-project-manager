@@ -47,5 +47,8 @@
     "filtered by tags": "etiketlərə görə süzülüb",
     "Save the workspace first to save a project": "Layihəni yadda saxlamaq üçün əvvəlcə iş sahəsini yadda saxlayın",
     "Open a folder first to save a project": "Layihəni yadda saxlamaq üçün əvvəlcə bir qovluq açın",
-    "Save Project": "Layihəni yadda saxla"
+    "Save Project": "Layihəni yadda saxla",
+    "{0} (missing)": "{0} (mövcud deyil)",
+    "{0} (detached)": "{0} (ayrılmış)",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Bu worktree-nin qovluğu artıq mövcud deyil. Worktree kilidli deyilsə, `git worktree prune` onun qeydini silir."
 }

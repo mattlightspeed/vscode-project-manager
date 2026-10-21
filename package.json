@@ -3,7 +3,7 @@
 	"displayName": "Project Manager",
 	"description": "Easily switch between projects",
 	"version": "13.1.1",
-	"publisher": "alefragnani",
+	"publisher": "mattlightspeed",
 	"engines": {
 		"vscode": "^1.78.0"
 	},
@@ -651,13 +651,43 @@
 					"command": "projectManager.addToFavorites",
 					"when": "view =~ /projectsExplorer(VSCode|Git|SVN|Any|Mercurial)/ && viewItem == ProjectNodeKind",
 					"group": "workspace"
+				},
+				{
+					"command": "_projectManager.openInNewWindow",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind",
+					"group": "inline"
+				},
+				{
+					"command": "_projectManager.openInNewWindow",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind",
+					"group": "navigation"
+				},
+				{
+					"command": "_projectManager.revealInFinder#sideBar",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind && isMac",
+					"group": "navigation@2"
+				},
+				{
+					"command": "_projectManager.revealInExplorer#sideBar",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind && isWindows",
+					"group": "navigation@2"
+				},
+				{
+					"command": "_projectManager.revealInFileManager#sideBar",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind && isLinux",
+					"group": "navigation@2"
+				},
+				{
+					"command": "projectManager.addToWorkspace#sideBar",
+					"when": "view == projectsExplorerFavorites && viewItem == WorktreeNodeKind",
+					"group": "workspace"
 				}
 			],
 			"extension/context": [
 				{
 					"command": "_projectManager.whatsNewContextMenu",
 					"group": "projectManager",
-					"when": "extension == alefragnani.project-manager && extensionStatus == installed"
+					"when": "extension == mattlightspeed.project-manager && extensionStatus == installed"
 				}
 			],
 			"projectManager.sideBar.favorites.title": [
@@ -861,6 +891,28 @@
 						],
 						"default": "never",
 						"description": "%projectManager.configuration.git.showBranchName.description%"
+					},
+					"projectManager.worktrees.showInFavorites": {
+						"type": "boolean",
+						"default": true,
+						"description": "%projectManager.configuration.worktrees.showInFavorites.description%"
+					},
+					"projectManager.worktrees.collapseItems": {
+						"type": "string",
+						"default": "startCollapsed",
+						"enum": [
+							"alwaysExpanded",
+							"alwaysCollapsed",
+							"startExpanded",
+							"startCollapsed"
+						],
+						"enumDescriptions": [
+							"%projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded%",
+							"%projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed%",
+							"%projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded%",
+							"%projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed%"
+						],
+						"description": "%projectManager.configuration.worktrees.collapseItems.description%"
 					}
 				}
 			},

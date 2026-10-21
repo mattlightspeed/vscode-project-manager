@@ -47,5 +47,8 @@
     "filtered by tags": "filtré par étiquettes",
     "Save the workspace first to save a project": "Sauvegarder d'abord l'espace de travail pour sauvegarder un projet",
     "Open a folder first to save a project": "Ouvrir d'abord un dossier pour enregistrer un projet",
-    "Save Project": "Enregistrer le projet"
+    "Save Project": "Enregistrer le projet",
+    "{0} (missing)": "{0} (manquant)",
+    "{0} (detached)": "{0} (détaché)",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Le dossier de ce worktree n'existe plus. `git worktree prune` supprime son enregistrement, sauf si le worktree est verrouillé."
 }

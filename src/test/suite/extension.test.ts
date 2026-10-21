@@ -19,7 +19,7 @@ suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
 
     suiteSetup(() => {
-        extension = vscode.extensions.getExtension('alefragnani.project-manager') as vscode.Extension<any>;
+        extension = vscode.extensions.all.find(e => e.extensionPath === path.resolve(__dirname, '..', '..', '..', '..')) as vscode.Extension<any>;
     });
 
     test('Sample test', () => {
@@ -53,6 +53,12 @@ suite('Extension Test Suite', () => {
         });
         assert.ok((await api.getAllProjects()).some(project => project.name === name));
         await assert.rejects(api.saveProject(name, otherRootPath));
+    });
+
+    test("What's New opens for the extension's own id", async () => {
+        await extension.activate();
+        await assert.doesNotReject(Promise.resolve(vscode.commands.executeCommand('projectManager.whatsNew')));
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     });
 
     test('Extension loads in VSCode and is active', async () => {

@@ -47,5 +47,8 @@
     "filtered by tags": "відфільтровано за тегами",
     "Save the workspace first to save a project": "Щоб зберегти проєкт, спочатку збережіть робочу область",
     "Open a folder first to save a project": "Щоб зберегти проєкт, спочатку відкрийте папку",
-    "Save Project": "Зберегти проєкт"
+    "Save Project": "Зберегти проєкт",
+    "{0} (missing)": "{0} (відсутній)",
+    "{0} (detached)": "{0} (від'єднаний)",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Папка цього worktree більше не існує. `git worktree prune` видаляє його запис, якщо worktree не заблоковано."
 }

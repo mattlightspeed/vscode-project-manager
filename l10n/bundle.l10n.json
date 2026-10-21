@@ -47,5 +47,8 @@
     "filtered by tags": "filtered by tags",
     "Save the workspace first to save a project": "Save the workspace first to save a project",
     "Open a folder first to save a project": "Open a folder first to save a project",
-    "Save Project": "Save Project"
+    "Save Project": "Save Project",
+    "{0} (missing)": "{0} (missing)",
+    "{0} (detached)": "{0} (detached)",
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked."
 }
