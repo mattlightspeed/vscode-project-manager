@@ -7,3 +7,4 @@ removed and never reused, and a plan refers to another by name alone, as
     python3 plans/tools/plan_links.py --claim <name>
 
 - expose-public-extension-api
+- worktrees-under-favorites
