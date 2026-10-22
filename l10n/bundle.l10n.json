@@ -50,5 +50,6 @@
     "Save Project": "Save Project",
     "{0} (missing)": "{0} (missing)",
     "{0} (detached)": "{0} (detached)",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked."
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}": "Could not write a workspace for this worktree, so it opens as a folder: {0}"
 }

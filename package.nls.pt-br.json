@@ -110,6 +110,7 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Os projetos favoritos com worktrees são sempre exibidos recolhidos.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Os projetos favoritos com worktrees começam expandidos, mas lembram seu último estado de expandido/recolhido.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Os projetos favoritos com worktrees começam recolhidos, mas lembram seu último estado de expandido/recolhido.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Abre um worktree da visão Favoritos como um workspace nomeado com o seu repositório e a sua branch, para que o título da janela e o Explorer mostrem ambos. Quando desativado, um worktree abre como um diretório simples.",
     "projectManager.colors.sideBar.currentProjectHighlightForeground.description": "A cor para destacar o projeto corrente na Barra Lateral",
     "projectManager.walkthroughs.title": "Começar a trabalhar com Project Manager",
     "projectManager.walkthroughs.description": "Aprenda mais sobre Project Manager para otimizar seu trabalho",

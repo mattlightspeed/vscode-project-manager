@@ -11,7 +11,7 @@ import { PathUtils } from "../utils/path";
 import { isRemotePath } from "../utils/remote";
 import { sortProjects } from "../utils/sorter";
 import { getGitBranch } from "../utils/git";
-import { getGitCommonDir, getLinkedWorktrees } from "../utils/worktrees";
+import { getGitCommonDir, getLinkedWorktrees, getRepositoryName } from "../utils/worktrees";
 import { NO_TAGS_DEFINED } from "./constants";
 import { NoTagNode, ProjectNode, TagNode, WorktreeNode } from "./nodes";
 import { WorktreeWatcher } from "./worktreeWatcher";
@@ -262,8 +262,9 @@ export class StorageProvider implements vscode.TreeDataProvider<ProjectNode | Ta
             return [];
         }
         const profile = element.command.arguments[ 2 ];
+        const repositoryName = getRepositoryName(projectPath);
         return getLinkedWorktrees(projectPath)
-            .map(worktree => new WorktreeNode(worktree, projectPath, profile))
+            .map(worktree => new WorktreeNode(worktree, projectPath, profile, repositoryName))
             .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base", numeric: true })
                 || a.preview.path.localeCompare(b.preview.path));
     }

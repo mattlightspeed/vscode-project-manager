@@ -110,6 +110,7 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Улюблені проєкти з worktree завжди згорнуті.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Улюблені проєкти з worktree спочатку розгорнуті, але запам'ятовують останній стан розгортання/згортання.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Улюблені проєкти з worktree спочатку згорнуті, але запам'ятовують останній стан розгортання/згортання.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Відкривати worktree з подання \"Улюблені\" як робочу область, названу за його репозиторієм і гілкою, щоб заголовок вікна та Провідник показували обидва. Якщо вимкнено, worktree відкривається як звичайна папка.",
     "projectManager.colors.sideBar.currentProjectHighlightForeground.description": "Колір для виділення поточного проєкту у бічній панелі",
     "projectManager.walkthroughs.title": "Початок роботи з Project Manager",
     "projectManager.walkthroughs.description": "Дізнайтеся більше про Project Manager, щоб оптимізувати свій робочий процес",

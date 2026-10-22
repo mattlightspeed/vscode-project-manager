@@ -10,6 +10,7 @@ import { codicons } from "vscode-ext-codicons";
 import { isRemoteUri } from "../utils/remote";
 import { getCodiconFromUri } from "../utils/icons";
 import { Project } from "../core/project";
+import { currentProjectUri } from "../utils/worktreeWorkspace";
 
 let statusItem: StatusBarItem;
 
@@ -21,9 +22,7 @@ export function showStatusBar(projectStorage: ProjectStorage, locators: Locators
     // let currentProjectPath = vscode.workspace.rootPath;
     //   const workspace0 = workspace.workspaceFolders ? workspace.workspaceFolders[0] : undefined;
     //   const currentProjectPath = workspace0 ? workspace0.uri.fsPath : undefined;
-    const workspace0 = workspace.workspaceFile ? workspace.workspaceFile :
-        workspace.workspaceFolders ? workspace.workspaceFolders[ 0 ].uri :
-            undefined;
+    const workspace0 = currentProjectUri();
     const currentProjectPath = workspace0 ? workspace0.fsPath : undefined;
 
     if (!showStatusConfig || !currentProjectPath) { return; }

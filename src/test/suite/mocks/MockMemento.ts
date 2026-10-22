@@ -23,8 +23,12 @@ export class MockMemento implements vscode.Memento {
     }
 }
 
-export function createMockContext(): vscode.ExtensionContext {
+export function createMockContext(globalStoragePath?: string): vscode.ExtensionContext {
     const globalState = new MockMemento();
-    return { globalState, extensionUri: vscode.Uri.file(path.resolve(__dirname, "..", "..", "..", "..", "..")) } as unknown as vscode.ExtensionContext;
+    return {
+        globalState,
+        extensionUri: vscode.Uri.file(path.resolve(__dirname, "..", "..", "..", "..", "..")),
+        globalStorageUri: globalStoragePath === undefined ? undefined : vscode.Uri.file(globalStoragePath)
+    } as unknown as vscode.ExtensionContext;
 }
 

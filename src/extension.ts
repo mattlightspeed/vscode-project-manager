@@ -18,7 +18,7 @@ import { showStatusBar, updateStatusBar } from "./statusbar/statusBar";
 import { getProjectDetails } from "./utils/suggestion";
 import { CommandLocation, PROJECTS_FILE } from "./core/constants";
 import { isMacOS, isRemoteUri, isWindows } from "./utils/remote";
-import { buildProjectUri } from "./utils/uri";
+import { buildOpenUri, currentProjectUri } from "./utils/worktreeWorkspace";
 import { Container } from "./core/container";
 import { registerWhatsNew } from "./whats-new/commands";
 import { registerSupportProjectManager } from "./commands/supportProjectManager";
@@ -83,8 +83,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const hideGitWelcome = context.globalState.get<boolean>("hideGitWelcome", false);
     vscode.commands.executeCommand("setContext", "projectManager.hiddenGitWelcome", hideGitWelcome);
 
-    vscode.commands.registerCommand("_projectManager.open", async (projectPath: string, projectName: string, profile: string) => {
-        const uri = buildProjectUri(projectPath);
+    vscode.commands.registerCommand("_projectManager.open", async (projectPath: string, projectName: string, profile: string, worktreeWindowName?: string) => {
+        const uri = buildOpenUri(projectPath, worktreeWindowName);
         if (!await canSwitchOnActiveWindow(CommandLocation.SideBar)) {
             return;
         }
@@ -94,7 +94,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 () => vscode.window.showInformationMessage(l10n.t("Could not open the project!")));
     });
     vscode.commands.registerCommand("_projectManager.openInNewWindow", (node) => {
-        const uri = buildProjectUri(node.command.arguments[0]);
+        const uri = buildOpenUri(node.command.arguments[0], node.command.arguments[3]);
         const openInNewWindow = shouldOpenInNewWindow(true, CommandLocation.SideBar);
         vscode.commands.executeCommand("vscode.openFolder", uri, { forceProfile: node.command.arguments[2] , forceNewWindow: openInNewWindow } )
             .then(
@@ -445,9 +445,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     function updateCurrentProject() {
-        const workspace0 = vscode.workspace.workspaceFile ? vscode.workspace.workspaceFile :
-            vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[ 0 ].uri :
-                undefined;
+        const workspace0 = currentProjectUri();
         const currentProjectPath = workspace0 ? workspace0.fsPath : undefined;
 
         let foundProject: Project;

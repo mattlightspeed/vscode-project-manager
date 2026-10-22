@@ -98,5 +98,6 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded": "Избранные проекты с worktree всегда развёрнуты.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Избранные проекты с worktree всегда свёрнуты.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Избранные проекты с worktree изначально развёрнуты, но запоминают последнее состояние свёртывания/разворачивания.",
-    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Избранные проекты с worktree изначально свёрнуты, но запоминают последнее состояние свёртывания/разворачивания."
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Избранные проекты с worktree изначально свёрнуты, но запоминают последнее состояние свёртывания/разворачивания.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Открывать worktree из представления \"Избранное\" как рабочую область, названную по его репозиторию и ветке, чтобы заголовок окна и Explorer показывали и то, и другое. Если выключено, worktree открывается как обычная папка."
 }

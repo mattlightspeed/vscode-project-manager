@@ -110,6 +110,7 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Favorite projects with worktrees are always collapsed.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Favorite projects with worktrees start expanded, but remember your last expand/collapse state.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Favorite projects with worktrees start collapsed, but remember your last expand/collapse state.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Open a worktree from the Favorites view as a workspace named after its repository and branch, so that the window title and the Explorer show both. When off, a worktree opens as a plain folder.",
     "projectManager.colors.sideBar.currentProjectHighlightForeground.description": "The color to highlight the current project in the Side Bar",
     "projectManager.walkthroughs.title": "Get Started with Project Manager",
     "projectManager.walkthroughs.description": "Learn more about Project Manager to optimize your workflow",

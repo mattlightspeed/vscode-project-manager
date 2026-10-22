@@ -913,6 +913,11 @@
 							"%projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed%"
 						],
 						"description": "%projectManager.configuration.worktrees.collapseItems.description%"
+					},
+					"projectManager.worktrees.openAsWorkspace": {
+						"type": "boolean",
+						"default": true,
+						"description": "%projectManager.configuration.worktrees.openAsWorkspace.description%"
 					}
 				}
 			},

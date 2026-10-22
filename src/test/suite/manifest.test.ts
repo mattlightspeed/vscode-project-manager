@@ -14,13 +14,15 @@ const NEW_SETTING_KEYS = [
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded",
-    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed"
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed",
+    "projectManager.configuration.worktrees.openAsWorkspace.description"
 ];
 
 const NEW_RUNTIME_KEYS = [
     "{0} (missing)",
     "{0} (detached)",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked."
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}"
 ];
 
 const LANGS = [ "az", "cs", "fr", "pt-br", "ru", "uk", "zh-cn", "zh-tw" ];
@@ -71,6 +73,14 @@ suite("Manifest", () => {
 
         assert.deepStrictEqual(collapseItems.enum, setting("projectManager.tags.collapseItems").enum);
         assert.strictEqual(collapseItems.default, "startCollapsed");
+    });
+
+    test("contributes projectManager.worktrees.openAsWorkspace, on by default", () => {
+        const openAsWorkspace = setting("projectManager.worktrees.openAsWorkspace");
+
+        assert.strictEqual(openAsWorkspace.type, "boolean");
+        assert.strictEqual(openAsWorkspace.default, true);
+        assert.strictEqual(vscode.workspace.getConfiguration("projectManager").inspect("worktrees.openAsWorkspace").defaultValue, true);
     });
 
     test("gives worktree nodes only the open-in-new-window, reveal and add-to-workspace menus", () => {

@@ -50,5 +50,6 @@
     "Save Project": "Enregistrer le projet",
     "{0} (missing)": "{0} (manquant)",
     "{0} (detached)": "{0} (détaché)",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Le dossier de ce worktree n'existe plus. `git worktree prune` supprime son enregistrement, sauf si le worktree est verrouillé."
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Le dossier de ce worktree n'existe plus. `git worktree prune` supprime son enregistrement, sauf si le worktree est verrouillé.",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}": "Impossible d'écrire un espace de travail pour ce worktree, il s'ouvre donc comme un dossier : {0}"
 }

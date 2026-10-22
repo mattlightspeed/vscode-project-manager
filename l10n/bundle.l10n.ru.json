@@ -50,5 +50,6 @@
     "Save Project": "Сохранить проект",
     "{0} (missing)": "{0} (отсутствует)",
     "{0} (detached)": "{0} (отсоединён)",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Папка этого worktree больше не существует. `git worktree prune` удаляет его запись, если worktree не заблокирован."
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Папка этого worktree больше не существует. `git worktree prune` удаляет его запись, если worktree не заблокирован.",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}": "Не удалось записать рабочую область для этого worktree, поэтому он открывается как папка: {0}"
 }

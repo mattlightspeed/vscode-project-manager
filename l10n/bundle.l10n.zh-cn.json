@@ -50,5 +50,6 @@
     "Save Project": "保存项目",
     "{0} (missing)": "{0}（缺失）",
     "{0} (detached)": "{0}（已分离）",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "此 worktree 的文件夹已不存在。`git worktree prune` 会删除其记录，除非该 worktree 已被锁定。"
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "此 worktree 的文件夹已不存在。`git worktree prune` 会删除其记录，除非该 worktree 已被锁定。",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}": "无法为此 worktree 写入工作区，因此将其作为文件夹打开：{0}"
 }

@@ -100,6 +100,7 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Les projets favoris avec des worktrees sont toujours réduits.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Les projets favoris avec des worktrees sont développés au départ, mais conservent votre dernier état développé/réduit.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Les projets favoris avec des worktrees sont réduits au départ, mais conservent votre dernier état développé/réduit.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Ouvre un worktree depuis la vue Favoris comme un espace de travail nommé d'après son dépôt et sa branche, afin que le titre de la fenêtre et l'explorateur affichent les deux. Si désactivé, un worktree s'ouvre comme un simple dossier.",
     "projectManager.walkthroughs.title": "Démarrer avec Project Manager",
     "projectManager.walkthroughs.description": "En savoir plus sur Project Manager pour optimiser votre flux de travail",
     "projectManager.walkthroughs.saveYourFavoriteProjects.title": "Sauvegardez vos projets favoris",

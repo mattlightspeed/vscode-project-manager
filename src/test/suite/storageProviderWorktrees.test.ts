@@ -110,6 +110,13 @@ suite("StorageProvider worktrees", function () {
         assert.ok(worktreeNodes.every(node => node.command.arguments[ 2 ] === "work"));
     });
 
+    test("worktree children name their window after the repository and their branch", async () => {
+        storage.push("repo", makeRepoWithWorktrees("feat"));
+
+        const [ worktreeNode ] = await children(await rootNode("repo"));
+        assert.strictEqual(worktreeNode.command.arguments[ 3 ], "repo · feat");
+    });
+
     test("in tag view, a favorite under its tag is collapsible and expands to its worktrees", async () => {
         await Container.context.globalState.update("viewAsList", false);
         storage.push("repo", makeRepoWithWorktrees("feat"), [ "Work" ]);

@@ -52,6 +52,18 @@ suite("WorktreeNode", () => {
         assert.deepStrictEqual(node.command.arguments, [ treePath, "feat/x", "work" ]);
     });
 
+    test("names its window after the repository and the tree's branch", () => {
+        const node = new WorktreeNode({ path: treePath, branch: "feat/x", missing: false }, projectPath, "work", "passwave-web");
+
+        assert.deepStrictEqual(node.command.arguments, [ treePath, "feat/x", "work", "passwave-web · feat/x" ]);
+    });
+
+    test("names a detached tree's window after the repository and the tree's folder", () => {
+        const node = new WorktreeNode({ path: treePath, branch: undefined, missing: false }, projectPath, "work", "passwave-web");
+
+        assert.strictEqual(node.command.arguments[ 3 ], "passwave-web · feat-x");
+    });
+
     test("is a WorktreeNodeKind with a git-branch icon", () => {
         const node = new WorktreeNode({ path: treePath, branch: "feat/x", missing: false }, projectPath, undefined);
 

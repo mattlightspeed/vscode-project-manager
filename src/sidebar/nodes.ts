@@ -9,6 +9,7 @@ import { ThemeIcons } from "vscode-ext-codicons";
 import { currentIconThemeHasFolderIcon, getProjectIcon, getIconDetailsFromProjectPath } from "../utils/icons";
 import { REMOTE_PREFIX, VIRTUAL_WORKSPACE_PREFIX } from "../utils/remote";
 import { LinkedWorktree } from "../utils/worktrees";
+import { worktreeWindowName } from "../utils/worktreeWorkspace";
 
 export interface ProjectPreview {
     name: string;
@@ -126,8 +127,9 @@ export class WorktreeNode extends ProjectNode {
 
     public readonly worktree: LinkedWorktree;
 
-    constructor(worktree: LinkedWorktree, projectPath: string, profile: string | undefined) {
+    constructor(worktree: LinkedWorktree, projectPath: string, profile: string | undefined, repositoryName?: string) {
         const label = worktree.branch ?? path.basename(worktree.path);
+        const windowNameArguments = repositoryName ? [ worktreeWindowName(repositoryName, label) ] : [];
         super(label, TreeItemCollapsibleState.None, undefined, {
             name: label,
             path: worktree.path,
@@ -135,7 +137,7 @@ export class WorktreeNode extends ProjectNode {
         }, worktree.missing ? undefined : {
             command: "_projectManager.open",
             title: "",
-            arguments: [ worktree.path, label, profile ]
+            arguments: [ worktree.path, label, profile, ...windowNameArguments ]
         });
 
         this.worktree = worktree;

@@ -4,8 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as assert from "assert";
-import { Uri } from "vscode";
-import { buildRemoteProjectPath, buildCodespacesProjectPath } from "../../utils/suggestion";
+import { Uri, WorkspaceFolder } from "vscode";
+import { buildRemoteProjectPath, buildCodespacesProjectPath, getProjectDetails } from "../../utils/suggestion";
+import * as worktreeWorkspace from "../../utils/worktreeWorkspace";
 
 suite("Suggestion utils", () => {
 
@@ -126,5 +127,18 @@ suite("Suggestion utils", () => {
         const roundTripped = Uri.parse(encoded);
         assert.ok(roundTripped.path.endsWith("C#/"),
             `round-tripped path must end with 'C#/'; got ${roundTripped.path}`);
+    });
+
+    test("getProjectDetails suggests a worktree workspace's worktree, named as its window", async () => {
+        const worktreeWorkspaceApi = worktreeWorkspace as unknown as { currentWorktreeWorkspaceFolder: () => WorkspaceFolder | undefined };
+        const originalCurrentWorktreeWorkspaceFolder = worktreeWorkspaceApi.currentWorktreeWorkspaceFolder;
+        const uri = Uri.file("/sites/passwave/worktrees/passwave-core/update-v1");
+        worktreeWorkspaceApi.currentWorktreeWorkspaceFolder = () => ({ uri, name: "passwave-core · update-v1", index: 0 });
+
+        try {
+            assert.deepStrictEqual(await getProjectDetails(), { path: uri.fsPath, name: "passwave-core · update-v1" });
+        } finally {
+            worktreeWorkspaceApi.currentWorktreeWorkspaceFolder = originalCurrentWorktreeWorkspaceFolder;
+        }
     });
 });

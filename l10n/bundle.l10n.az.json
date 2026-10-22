@@ -50,5 +50,6 @@
     "Save Project": "Layihəni yadda saxla",
     "{0} (missing)": "{0} (mövcud deyil)",
     "{0} (detached)": "{0} (ayrılmış)",
-    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Bu worktree-nin qovluğu artıq mövcud deyil. Worktree kilidli deyilsə, `git worktree prune` onun qeydini silir."
+    "The folder of this worktree no longer exists. `git worktree prune` removes its record, unless the worktree is locked.": "Bu worktree-nin qovluğu artıq mövcud deyil. Worktree kilidli deyilsə, `git worktree prune` onun qeydini silir.",
+    "Could not write a workspace for this worktree, so it opens as a folder: {0}": "Bu worktree üçün iş sahəsi yazıla bilmədi, ona görə də o qovluq kimi açılır: {0}"
 }

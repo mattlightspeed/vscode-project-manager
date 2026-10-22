@@ -6,6 +6,7 @@
 import { commands, l10n, Uri, window, workspace } from "vscode";
 import path = require("path");
 import { isRunningOnCodespaces } from "./remote";
+import { currentWorktreeWorkspaceFolder } from "./worktreeWorkspace";
 
 /**
  * Build a percent-encoded URI string from a remote VS Code Uri.
@@ -39,6 +40,14 @@ export interface ProjectDetails {
 }
 
 export async function getProjectDetails(): Promise<ProjectDetails> {
+
+    const worktreeFolder = currentWorktreeWorkspaceFolder();
+    if (worktreeFolder) {
+        return {
+            path: worktreeFolder.uri.fsPath,
+            name: worktreeFolder.name
+        };
+    }
 
     // workspaceFile - .code-workspace
     if (workspace.workspaceFile) {

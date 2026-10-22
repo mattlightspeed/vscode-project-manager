@@ -7,7 +7,7 @@ import * as assert from "assert";
 import { execFileSync } from "child_process";
 import fs = require("fs");
 import path = require("path");
-import { getGitCommonDir, getLinkedWorktrees } from "../../utils/worktrees";
+import { getGitCommonDir, getLinkedWorktrees, getRepositoryName } from "../../utils/worktrees";
 import { addLinkedWorktree, makeMainCheckout, makeTempDir, removeTempDir, toGitPath } from "./mocks/worktreeFixtures";
 
 suite("getGitCommonDir", function () {
@@ -80,6 +80,59 @@ suite("getGitCommonDir", function () {
         fs.mkdirSync(path.join(recordDir, "commondir"));
 
         assert.strictEqual(getGitCommonDir(tree), undefined);
+    });
+});
+
+suite("getRepositoryName", function () {
+    this.timeout(5000);
+
+    let root: string;
+
+    setup(() => {
+        root = makeTempDir("repository-name-");
+    });
+
+    teardown(() => {
+        removeTempDir(root);
+    });
+
+    test("returns undefined for a folder that is not a git repository", () => {
+        assert.strictEqual(getRepositoryName(root), undefined);
+    });
+
+    test("names a main checkout by its folder", () => {
+        const repo = makeMainCheckout(root, "passwave-core");
+
+        assert.strictEqual(getRepositoryName(repo), "passwave-core");
+    });
+
+    test("names a linked worktree by its main checkout's folder", () => {
+        const repo = makeMainCheckout(root, "passwave-core");
+        const tree = path.join(root, "worktrees", "passwave-core", "update-v1");
+        addLinkedWorktree(path.join(repo, ".git"), "update-v1", tree, { branch: "update-v1" });
+
+        assert.strictEqual(getRepositoryName(tree), "passwave-core");
+    });
+
+    test("names a bare clone by its folder without .git", () => {
+        const tree = path.join(root, "feat");
+        addLinkedWorktree(path.join(root, "repo.git"), "feat", tree, { branch: "feat" });
+
+        assert.strictEqual(getRepositoryName(tree), "repo");
+    });
+
+    test("names a clone whose git folder starts with a dot by the folder above it", () => {
+        const tree = path.join(root, "repo", "feat");
+        addLinkedWorktree(path.join(root, "repo", ".bare"), "feat", tree, { branch: "feat" });
+
+        assert.strictEqual(getRepositoryName(tree), "repo");
+    });
+
+    test("names a bare clone without a .git suffix by its folder", () => {
+        const tree = path.join(root, "feat");
+        addLinkedWorktree(path.join(root, "repo"), "feat", tree, { branch: "feat" });
+
+        assert.strictEqual(getRepositoryName(tree), "repo");
     });
 });
 

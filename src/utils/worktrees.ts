@@ -40,6 +40,18 @@ export function getGitCommonDir(projectPath: string): string | undefined {
     }
 }
 
+export function getRepositoryName(projectPath: string): string | undefined {
+    const commonDir = getGitCommonDir(projectPath);
+    if (!commonDir) {
+        return undefined;
+    }
+    const commonDirName = path.basename(commonDir);
+    if (commonDirName.startsWith(".")) {
+        return path.basename(path.dirname(commonDir));
+    }
+    return commonDirName.endsWith(".git") ? commonDirName.slice(0, -".git".length) : commonDirName;
+}
+
 export function getLinkedWorktrees(projectPath: string): LinkedWorktree[] {
     const commonDir = getGitCommonDir(projectPath);
     if (!commonDir) {

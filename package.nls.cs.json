@@ -98,5 +98,6 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysExpanded": "Oblíbené projekty s worktree jsou vždy rozbalené.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Oblíbené projekty s worktree jsou vždy sbalené.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Oblíbené projekty s worktree jsou na začátku rozbalené, ale pamatují si váš poslední stav rozbalení/sbalení.",
-    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Oblíbené projekty s worktree jsou na začátku sbalené, ale pamatují si váš poslední stav rozbalení/sbalení."
+    "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Oblíbené projekty s worktree jsou na začátku sbalené, ale pamatují si váš poslední stav rozbalení/sbalení.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Otevřít worktree ze zobrazení Oblíbené jako pracovní prostor pojmenovaný podle jeho repozitáře a větve, aby titulek okna i Průzkumník zobrazovaly obojí. Je-li vypnuto, worktree se otevře jako obyčejná složka."
 }

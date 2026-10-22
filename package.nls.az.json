@@ -110,6 +110,7 @@
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.alwaysCollapsed": "Worktree-ləri olan seçilmiş layihələr həmişə bağlı olur.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startExpanded": "Worktree-ləri olan seçilmiş layihələr açıq vəziyyətdə başlayır, lakin son açma/bağlama vəziyyətinizi yadda saxlayır.",
     "projectManager.configuration.worktrees.collapseItems.enumDescriptions.startCollapsed": "Worktree-ləri olan seçilmiş layihələr bağlı vəziyyətdə başlayır, lakin son açma/bağlama vəziyyətinizi yadda saxlayır.",
+    "projectManager.configuration.worktrees.openAsWorkspace.description": "Seçilmişlər görünüşündən açılan worktree-ni repozitoriyası və budağı ilə adlandırılmış iş sahəsi kimi aç ki, pəncərə başlığı və Explorer hər ikisini göstərsin. Söndürüldükdə worktree adi qovluq kimi açılır.",
     "projectManager.colors.sideBar.currentProjectHighlightForeground.description": "Yan paneldə cari layihəni vurğulamaq üçün istifadə olunan rəng",
     "projectManager.walkthroughs.title": "Project Manager ilə başlayın",
     "projectManager.walkthroughs.description": "İş axınınızı optimallaşdırmaq üçün Project Manager haqqında daha ətraflı öyrənin",
