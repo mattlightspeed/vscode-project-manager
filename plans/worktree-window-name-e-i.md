@@ -8,9 +8,9 @@
 - **Latest review**: 2026-10-22 13:12 UTC
 - **Latest review by**: Fable 5.1 (`claude-fable-5-1`)
 - **Review count**: 1
-- **Implemented**: —
-- **Implemented by**: —
-- **Status**: **reviewed 1×**, ready to implement; its one gate is met
+- **Implemented**: 2026-10-22 13:49 UTC
+- **Implemented by**: Opus 5.5 (`claude-opus-5-5`)
+- **Status**: **implemented (reviewed 1×).** Landed as specified, at 198 passing, with the code of *Specification* unchanged; then Matt's hand-over (WWN-R1)
 
 Item ids are stable: findings **WWN-F*n***, decisions **WWN-D*n***, residue
 **WWN-R*n***. Tests are named by the suites and titles given in *Tests*.
@@ -1316,6 +1316,49 @@ Not changed, checked and kept: the mechanism (WWN-D1), the storage place
 (`Locators.removeRootPath`, which filters by `workspace.rootPath`), the
 test counts 158 → 164 → 165 → 194 → 198, the translation files' line
 endings and anchors, and the Gate's state.
+
+## Implementation (2026-10-22)
+
+Implemented on `master` at `3502b18`, which differs from the snapshot
+`091cb48` only under `plans/`, by Opus 5.5, in the order of *Order of work*.
+Step 0 was not needed: `vscode-whats-new/` and `node_modules/` were
+populated. Nothing is committed (WF-D13).
+
+**Run, and how it came out:**
+- Baseline, before any change: lint 0 errors and 52 warnings; `npm test`,
+  outside Claude's sandbox, 158 passing.
+- `npm test` at each step, outside the sandbox: 164, 165, 194 and 198
+  passing, as each step expected, with no failure at any step.
+- *Verification* 1-6: lint 0 errors and 52 warnings, in the same nine files
+  as before, `MockMemento.ts`'s two still at `:10` and `:16`; `npm run build`
+  compiled; 198 passing; the diff touches only *Files*, the two new files
+  are the only untracked ones outside `plans/`, and the `plans/` changes
+  are this plan's and two left by another session; the VSIX printed
+  `mattlightspeed 13.1.1 True`, `0` and `0` (110 files, 2.14 MB);
+  `plan_links.py --check` passed.
+- The test log's `DEP0169` deprecation line comes from VS Code's own agent
+  host, and was in the baseline run too.
+
+**Where the implementation chose what the text left open:**
+- N11 and N12 follow N5, and S21 follows the profile test.
+- WW2's `<root>/elsewhere/feat-x` is not created, since writing a file for
+  it does not read it. B6's second tree is `<root>/worktrees/repo/gone`, and
+  P3's subfolders are `key0` to `key3` and `empty`.
+- SG1 names its view of the module `worktreeWorkspaceApi`, as
+  `decoration.test.ts` names `windowApi`, rather than `module`, which shadows
+  Node's.
+- The translations are the implementer's, in each file's existing words:
+  `pt-br` keeps `workspace` and `diretório`, `zh-tw` `文件夾` and `窗口`, and
+  `fr` puts a space before the colon (WWN-R12).
+- WWN-R7 is FU-2026-10-005's item, which the plan keeps as it stands, so it
+  is recorded on that entry after `; also`, with no entry of its own.
+
+**Not checked:**
+- That each new test fails before its step: no test was run against the
+  tree as it stood before its step. Each fails to compile there, except M7,
+  M5, M6 and S21, which assert what the step adds.
+- Anything in *Assumed, not verified*, and the hand-over's manual checks,
+  which need Matt's editor.
 
 ## Tests to remove after implementation
 

@@ -3,4 +3,5 @@
 #   <stem> <YYYY-MM-DD processed> <backfill|implement> <entries>
 # entries counts month-file lines naming the plan as source; a plan merged into an
 # earlier plan's entry after "; also" counts 0. Add lines with plan_residue.py record.
+worktree-window-name 2026-10-22 implement 14
 worktrees-under-favorites 2026-10-21 implement 21
