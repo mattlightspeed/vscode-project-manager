@@ -23,15 +23,23 @@ master where there is no main), the sibling's trunk. That branch is read from
 the worktree that has it checked out, or from git where none has. Where no
 branch is chosen, the sibling's checked-out tree answers. A linked worktree is
 its main repo, named by its main checkout's folder, and is never a sibling.
+Siblings are the repos beside the main checkout, so a tree run from anywhere
+finds the same ones, and a link that leaves the tree is followed from the main
+checkout's place.
 plans/followups/ is never read.
 
 `--tree REPO` prints the working tree of REPO that has that branch, or the one
 `--branch` names, checked out, for writing plans and register entries there.
-Where none has, it names the worktree it would create beside REPO,
-`<folder>-<slug>`, and exits 3; `--create` makes it, runs no hook, and marks
-it plan-only in its git directory. `--worktrees REPO...` lists plan-only
-worktrees, with the command for each that can go. Neither fetches, commits or
-removes anything.
+REPO is a path, or the name of a repo beside this tree's main checkout. A tree
+outside the worktree layout is printed with a note. Where none has the branch,
+it names the worktree it would create at the branch's place in the layout,
+`<parent of the main checkout>/worktrees/<its folder>/<slug>`, and exits 3;
+`--create` makes it and any folder of the layout it lacks, each with the mode
+and group of the folder holding it, runs no hook, marks it plan-only in its
+git directory, and prints the `safe.directory` line another account needs
+before using it. `--worktrees REPO...` lists plan-only worktrees, marking those
+outside the layout, with the command for each that can go. Neither fetches,
+commits or removes anything.
 
 The same file is vendored unchanged into every repo with a plans/ tree, so it
 holds no per-repo configuration.
@@ -112,6 +120,7 @@ REF_VERDICTS = (KNOWN, UNKNOWN_NAME, CROSS_REPO_REF, CROSS_REPO_REF_UNRESOLVED)
 PAIRS = Path('plans') / 'tools' / 'branch-pairs.txt'
 MARKER = 'plan-only'
 WOULD_CREATE = 3
+WORKTREES = 'worktrees'
 CHECK_CLASSES = ('stems', 'names', 'allowlist', 'links', 'refs', 'pairs')
 DEAD_GROUPS = (
     'Claude-memory paths',
@@ -157,8 +166,25 @@ def is_linked_worktree(path: Path) -> bool:
     return main_worktree(path) != path
 
 
+def sibling_dir(root: Path) -> Path:
+    return main_worktree(root).parent
+
+
+def folder_repo(folder: Path) -> str:
+    if is_linked_worktree(folder):
+        return repo_name(folder)
+    if not folder.exists() and folder.parent.parent.name == WORKTREES:
+        return folder.parent.name
+    return folder.name
+
+
 def folder_slug(branch: str) -> str:
     return re.sub(r'[^a-z0-9]+', '-', branch.lower()).strip('-')
+
+
+def layout_path(main: Path, branch: str) -> Path | None:
+    slug = folder_slug(branch)
+    return main.parent / WORKTREES / main.name / slug if slug else None
 
 
 def current_branch(repo: Path) -> str | None:
@@ -189,6 +215,17 @@ class Worktree:
     branch: str | None      # None: detached HEAD
     admin: Path | None      # the worktree's own git directory; None for the main worktree
     prunable: bool
+
+
+def outside_layout(main: Path, worktree: Worktree) -> bool:
+    here = os.path.realpath(worktree.path)
+    if here == os.path.realpath(main):
+        return False
+    expected = layout_path(main, worktree.branch) if worktree.branch else None
+    if expected is not None:
+        return here != os.path.realpath(expected)
+    # With no path of its own, a tree may sit anywhere directly in the clone's folder of the layout.
+    return os.path.dirname(here) != os.path.realpath(main.parent / WORKTREES / main.name)
 
 
 def _is_toplevel(repo: Path) -> bool:
@@ -298,7 +335,7 @@ def index_by_stem(files) -> dict[str, list[Path]]:
 
 def sibling_index(root: Path) -> dict[tuple[str, str], list[Path]]:
     index: dict[tuple[str, str], list[Path]] = {}
-    for repo in sorted(root.parent.iterdir()):
+    for repo in sorted(sibling_dir(root).iterdir()):
         try:
             if repo.name == repo_name(root) or is_linked_worktree(repo) or not (repo / 'plans').is_dir():
                 continue
@@ -439,7 +476,7 @@ class Siblings:
         return self._found[name]
 
     def _look_up(self, name: str) -> SiblingNames | None:
-        path = self.root.parent / name
+        path = sibling_dir(self.root) / name
         try:
             if not path.is_dir() or is_linked_worktree(path) or name == repo_name(self.root):
                 return None
@@ -507,8 +544,21 @@ def iter_references(path: Path) -> Iterator[tuple[int, re.Match]]:
                 yield line_no, match
 
 
+def link_path(root: Path, src: Path, target: str) -> Path:
+    # A link that leaves the repo assumes it sits beside its neighbours, as only the main checkout does.
+    path = Path(os.path.normpath(src.parent / target))
+    main = main_worktree(root)
+    if main == root or path == root or root in path.parents:
+        return path
+    if not os.path.isabs(target):
+        path = Path(os.path.normpath(main / os.path.relpath(path, root)))
+    if path == main or main in path.parents:
+        return root / path.relative_to(main)
+    return path
+
+
 def cross_repo_plan(root: Path, src: Path, target: str) -> tuple[str, str] | None:
-    path = Path(os.path.normpath(target if os.path.isabs(target) else src.parent / target))
+    path = link_path(root, src, target)
     if path == root or root in path.parents:
         return None
     parts = path.parts
@@ -521,7 +571,8 @@ def cross_repo_plan(root: Path, src: Path, target: str) -> tuple[str, str] | Non
     if ((len(rest) > 1 and rest[0] == 'followups') or rest[-1] == 'README.md' or rest in REGISTER_PARTS
             or any(part.startswith('.') for part in rest)):
         return None
-    repo = REPO_RENAMES.get(parts[i - 1], parts[i - 1])
+    name = folder_repo(Path(*parts[:i]))
+    repo = REPO_RENAMES.get(name, name)
     if repo == repo_name(root):
         return None
     return repo, stem(rest[-1])
@@ -531,7 +582,7 @@ def classify_link(root: Path, src: Path, target: str, index, named, dead) -> tup
     cross = cross_repo_plan(root, src, target)
     if cross is not None:
         return CROSS_REPO_PATH, cross
-    path = Path(os.path.normpath(src.parent / target))
+    path = link_path(root, src, target)
     if path.exists():
         return (PLAN_PATH, (None, stem(path.name))) if path in named else (OK, None)
     if target in dead:
@@ -561,12 +612,13 @@ def classify_cite(root: Path, content: str, index) -> tuple[str, tuple[str | Non
         if rest[:1] == ['followups'] or (*rest, file) in REGISTER_PARTS:
             return None
         if i > 0:
-            repo = REPO_RENAMES.get(dirs[i - 1], dirs[i - 1])
+            name = folder_repo(Path('/', *dirs[:i])) if absolute else dirs[i - 1]
+            repo = REPO_RENAMES.get(name, name)
             if repo != repo_name(root):
                 if absolute:
                     exists = Path('/', *dirs[:i]).is_dir()
                 else:
-                    exists = (root.parent / repo / 'plans').is_dir()
+                    exists = (sibling_dir(root) / repo / 'plans').is_dir()
                 return (CROSS_REPO_PATH, (repo, stem(file)), lines) if exists else None
     if stem(file) in index:
         return PLAN_PATH, (None, stem(file)), lines
@@ -863,7 +915,7 @@ def resolve(root: Path, refs: list[str]) -> int:
 def _resolved_on_branch(root: Path, text: str, repo: str, name: str, found: SiblingNames) -> str:
     if found.missing:
         return f'{text}: {repo} has no branch {found.branch}'
-    listed = branch_plans(root.parent / REPO_RENAMES.get(repo, repo), found.branch)
+    listed = branch_plans(sibling_dir(root) / REPO_RENAMES.get(repo, repo), found.branch)
     paths = [path for path in (listed[0] if listed else []) if stem(path.rsplit('/', 1)[-1]) == name]
     if paths:
         return f'{text}: on {found.branch}, which no tree of {repo} has checked out: ' + ', '.join(paths)
@@ -891,14 +943,19 @@ def tree(here: Path, repo: Path, branch: str | None, create: bool) -> int:
         return 1
     if holder is not None:
         print(holder.path)
+        if outside_layout(main, holder):
+            print(_outside_note(main, holder))
         _print_removable(main, found, holder.path)
         return 0
 
-    slug = folder_slug(branch)
-    if not slug:
+    target = layout_path(main, branch)
+    if target is None:
         print(f'refused: branch {branch} gives no folder name')
         return 1
-    target = main.parent / f'{main.name}-{slug}'
+    layout = target.parent.parent
+    if (layout / '.git').exists():
+        print(f'refused: the layout puts {branch} at {target}, inside the git work tree {layout}')
+        return 1
     if target.exists() or target.is_symlink():
         print(f'refused: {target} exists and does not have {branch} checked out')
         return 1
@@ -919,12 +976,28 @@ def tree(here: Path, repo: Path, branch: str | None, create: bool) -> int:
         print(f'would create: {target} on {branch}{tracking}. Ask, then run again with --create.')
         return WOULD_CREATE
 
+    made: list[Path] = []
+    try:
+        for folder in (layout, target.parent):
+            if not folder.is_dir():
+                containing = folder.parent.stat()
+                folder.mkdir()
+                made.append(folder)
+                with contextlib.suppress(PermissionError):
+                    os.chown(folder, -1, containing.st_gid)
+                folder.chmod(containing.st_mode & 0o7777)
+    except OSError as exc:
+        _remove_folders(made)
+        print(f'refused: {exc.filename} could not be created: {exc.strerror}')
+        return 1
+
     if remote_ref is None:
         add = ('worktree', 'add', '--quiet', str(target), branch)
     else:
         add = ('worktree', 'add', '--quiet', '--track', '-b', branch, str(target), remote_ref)
     added = _git(main, '-c', 'core.hooksPath=/dev/null', *add)
     if added.returncode != 0:
+        _remove_folders(made)
         reason = next((line for line in reversed(added.stderr.splitlines()) if line.strip()), 'no message')
         print(f'refused: git worktree add failed: {reason}')
         return 1
@@ -941,8 +1014,22 @@ def tree(here: Path, repo: Path, branch: str | None, create: bool) -> int:
     print(target)
     print(f'created: plan-only worktree of {main} on {branch}; commit there. While it holds {branch}, '
           f'git checks {branch} out nowhere else: git -C {main} worktree remove {target}')
+    print('trust: git run by another account refuses this tree, which this account owns, unless that account '
+          f'trusts it: git config --global --add safe.directory {target}')
     _print_removable(main, found, target)
     return 0
+
+
+def _outside_note(main: Path, worktree: Worktree) -> str:
+    expected = layout_path(main, worktree.branch)
+    where = f'which puts {worktree.branch} at {expected}' if expected else f'which has no folder for {worktree.branch}'
+    return f'note: {worktree.path} is outside the worktree layout, {where}'
+
+
+def _remove_folders(made: list[Path]) -> None:
+    for folder in reversed(made):
+        with contextlib.suppress(OSError):
+            folder.rmdir()
 
 
 def _plan_only(worktree: Worktree) -> bool:
@@ -983,7 +1070,7 @@ def _print_removable(main: Path, found: list[Worktree], printed: Path) -> None:
 
 def report_worktrees(repos: list[Path]) -> int:
     code = 0
-    listed = total = removable = 0
+    listed = total = removable = outside = 0
     for repo in repos:
         found = worktrees(repo)
         if found is None:
@@ -996,12 +1083,16 @@ def report_worktrees(repos: list[Path]) -> int:
         print(f'{main}: {len(plan_only)} plan-only worktrees')
         for worktree in plan_only:
             state, verb, command = _state(main, worktree, trunk_name)
+            elsewhere = outside_layout(main, worktree)
             print(f'  {worktree.path} ({worktree.branch or "no branch"}): {state}'
+                  + ('; outside the layout' if elsewhere else '')
                   + (f'; {verb}: {command}' if command else ''))
             removable += command is not None
+            outside += elsewhere
         listed += 1
         total += len(plan_only)
-    print(f'plan_links: {listed} repos, {total} plan-only worktrees, {removable} removable')
+    print(f'plan_links: {listed} repos, {total} plan-only worktrees, {removable} removable, '
+          f'{outside} outside the layout')
     return code
 
 
@@ -1040,7 +1131,7 @@ def _dead_group(root: Path, link: Link) -> int:
     if '.claude' in parts or 'memory' in parts:
         return 0
     first = next((part for part in parts if part not in ('.', '..')), '')
-    if first in REPO_RENAMES or (first != repo_name(root) and (root.parent / first).is_dir()):
+    if first in REPO_RENAMES or (first != repo_name(root) and (sibling_dir(root) / first).is_dir()):
         return 2
     return 1
 
@@ -1675,6 +1766,32 @@ def _case_folder_slug_table(tmp: Path) -> None:
     _same({branch: folder_slug(branch) for branch in table}, table, 'folder slug table')
 
 
+def _case_layout_path_vectors(tmp: Path) -> None:
+    # sonata-server-automation's tests/unit/classes/test_worktree_layout.py holds the same rows, and checks them
+    # against its copy of this file: change both together.
+    vectors = [
+        ('/usr/share/nginx/sites/passwave/passwave-core', 'update-v1',
+         '/usr/share/nginx/sites/passwave/worktrees/passwave-core/update-v1'),
+        ('/usr/share/nginx/sites/passwave/passwave-web', 'main',
+         '/usr/share/nginx/sites/passwave/worktrees/passwave-web/main'),
+        ('/srv/projects/sonata-server-automation', 'master',
+         '/srv/projects/worktrees/sonata-server-automation/master'),
+        ('/srv/projects/sonata-server-automation/', 'feat/x',
+         '/srv/projects/worktrees/sonata-server-automation/feat-x'),
+        ('/usr/share/nginx/sites/lightspeed-digital', 'WS22.release_readiness',
+         '/usr/share/nginx/sites/worktrees/lightspeed-digital/ws22-release-readiness'),
+        ('/srv/sites/Acme_Shop', 'Feat__X--', '/srv/sites/worktrees/Acme_Shop/feat-x'),
+        ('/srv/sites/shop', 'dev-v1.1', '/srv/sites/worktrees/shop/dev-v1-1'),
+        ('/srv/sites/shop', 'ü-x', '/srv/sites/worktrees/shop/x'),
+        ('/srv/sites/shop', 'a' * 70 + '/b', '/srv/sites/worktrees/shop/' + 'a' * 70 + '-b'),
+    ]
+    no_slug = ['_', '__', '+']
+    _same([str(layout_path(Path(main), branch)) for main, branch, _place in vectors],
+          [place for _main, _branch, place in vectors], 'layout vectors')
+    _same([(folder_slug(name), layout_path(Path('/srv/sites/shop'), name)) for name in no_slug],
+          [('', None)] * len(no_slug), 'no slug')
+
+
 def _case_read_pairs(tmp: Path) -> None:
     root = _fixture(tmp, {})
     _same(read_pairs(root), ({}, []), 'no file')
@@ -1718,6 +1835,86 @@ def _case_a_linked_worktree_names_its_main_repo(tmp: Path) -> None:
     _same(classify_reference(b_x, 'B', 'one', {'one'}, Siblings(b_x)), KNOWN, 'verdict')
     code, lines = _captured(check, b_x, 'refs')
     _same((code, len(lines), lines[-1].startswith('plan_links: ')), (0, 1, True), 'check in the worktree')
+
+
+def _case_a_tree_in_the_layout_finds_the_repos_beside_its_main_checkout(tmp: Path) -> None:
+    b = _git_repo(tmp / 'B', 'main', {'plans/one.md': '', 'plans/tools/names.md': NAMES_PREAMBLE + '- one\n'})
+    _sh(b, 'branch', 'x')
+    b_x = _add_worktree(b, tmp / WORKTREES / 'B' / 'x', 'x')
+    c = _git_repo(tmp / 'C', 'main', {'plans/c.md': ''})
+    _sh(c, 'branch', 'feature')
+
+    _same([sibling_dir(b_x), sibling_dir(b)], [tmp, tmp], 'sibling dirs')
+    _same({repo for repo, _name in sibling_index(b_x)}, {'C'}, 'sibling index')
+    _same(Siblings(b_x).names('C').names, frozenset({'c'}), 'sibling names')
+    _write(b_x / 'plans/a.md', '[[C:c]] [[B:one]]\n')
+    code, lines = _captured(check, b_x, 'refs')
+    _same((code, lines[:-1]), (0, []), 'check in the tree')
+    _same(_captured(resolve, b_x, ['C:c']), (0, [str(c / 'plans/c.md')]), 'resolve')
+    index = index_by_stem(named_plan_files(b_x / 'plans'))
+    _same(classify_cite(b_x, 'C/plans/c.md', index), (CROSS_REPO_PATH, ('C', 'c'), ''), 'cite')
+    dead = Link(b_x / 'plans/a.md', 1, '../../C/missing.md', '', DEAD_UNLISTED, 'link', None)
+    _same(_dead_group(b_x, dead), 2, 'a dead link into a sibling')
+
+    _write(b_x / PAIRS, 'x C feature\n')
+    _same(_captured(resolve, b_x, ['C:c']),
+          (1, ['C:c: on feature, which no tree of C has checked out: plans/c.md']), 'resolve on the paired branch')
+
+    _same(_captured(main, ['--tree', 'C', '--branch=main'], b_x), (0, [str(c)]), '--tree by name')
+    _same(_captured(main, ['--tree', '.', '--branch=x'], b_x), (0, [str(b_x)]), '--tree of this tree')
+    _same(_captured(main, ['--worktrees', 'C'], b_x), (0, [
+        f'{c}: 0 plan-only worktrees',
+        'plan_links: 1 repos, 0 plan-only worktrees, 0 removable, 0 outside the layout',
+    ]), '--worktrees by name')
+    _same(_captured(main, ['--tree', 'nowhere', '--branch=main'], b_x),
+          (1, [f'refused: {tmp}/nowhere is not the root of a git work tree']), 'a name no repo has')
+
+
+def _case_links_from_a_tree_are_followed_from_its_main_checkout(tmp: Path) -> None:
+    b = _git_repo(tmp / 'B', 'main', {'plans/one.md': '', 'plans/a.md': ''})
+    _sh(b, 'branch', 'x')
+    b_x = _add_worktree(b, tmp / WORKTREES / 'B' / 'x', 'x')
+    for rel in ('C/docs/guide.md', 'C/plans/c.md'):
+        _write(tmp / rel, '')
+    expected = [
+        ('../../C/docs/guide.md', (OK, None)),
+        (str(tmp / 'C/docs/guide.md'), (OK, None)),
+        ('../../C/docs/missing.md', (DEAD_UNLISTED, None)),
+        ('../../C/plans/c.md', (CROSS_REPO_PATH, ('C', 'c'))),
+        ('../../B/plans/one.md', (PLAN_PATH, (None, 'one'))),
+        (str(b / 'plans/one.md'), (PLAN_PATH, (None, 'one'))),
+        ('one.md', (PLAN_PATH, (None, 'one'))),
+    ]
+    for root in (b, b_x):
+        for target, verdict in expected:
+            _same(_classify_in(root, 'plans/a.md', target), verdict, f'from {root}: {target}')
+    _same([link_path(b_x, b_x / 'plans/a.md', target)
+           for target in ('../../C/docs/guide.md', str(b / 'plans/one.md'), 'one.md')],
+          [tmp / 'C/docs/guide.md', b_x / 'plans/one.md', b_x / 'plans/one.md'], 'paths from the tree')
+    _same(link_path(b, b / 'plans/a.md', '../../C/x.md'), tmp / 'C/x.md', 'paths from the main checkout')
+
+
+def _case_a_path_into_a_worktree_names_its_repo(tmp: Path) -> None:
+    c = _git_repo(tmp / 'C', 'main', {'plans/c.md': ''})
+    for name in ('x', 'y'):
+        _sh(c, 'branch', name)
+    c_x = _add_worktree(c, tmp / WORKTREES / 'C' / 'x', 'x')
+    c_y = _add_worktree(c, tmp / 'C-y', 'y')
+    gone = tmp / WORKTREES / 'C' / 'gone'
+    root = _fixture(tmp, {'root/plans/a.md': ''})
+    index = index_by_stem(named_plan_files(root / 'plans'))
+
+    _same([folder_repo(path) for path in (c_x, c_y, c, gone, tmp / 'gone', tmp / WORKTREES)],
+          ['C', 'C', 'C', 'C', 'gone', WORKTREES], 'folder repos')
+    for folder in (c_x, c_y, gone):
+        _same(cross_repo_plan(root, root / 'plans/a.md', str(folder / 'plans/c-e.md')), ('C', 'c'),
+              f'a link into {folder}')
+    for folder in (c_x, c_y):
+        _same(classify_cite(root, str(folder / 'plans/c.md'), index), (CROSS_REPO_PATH, ('C', 'c'), ''),
+              f'a cite into {folder}')
+    _same(classify_cite(root, str(gone / 'plans/c.md'), index), None, 'a cite into a missing tree')
+    own = index_by_stem(named_plan_files(c / 'plans'))
+    _same(classify_cite(c, str(c_x / 'plans/c.md'), own), (PLAN_PATH, (None, 'c'), ''), 'a cite into its own worktree')
 
 
 def _case_worktrees_and_trunks(tmp: Path) -> None:
@@ -1776,50 +1973,70 @@ def _case_branch_names(tmp: Path) -> None:
 def _case_tree_finds_the_tree_holding_the_branch(tmp: Path) -> None:
     a = _git_repo(tmp / 'A', 'main')
     b = _git_repo(tmp / 'B', 'main')
-    _sh(b, 'branch', 'x')
+    for name in ('x', 'y', '_'):
+        _sh(b, 'branch', name)
     b_x = _add_worktree(b, tmp / 'B-x', 'x')
+    b_y = _add_worktree(b, tmp / WORKTREES / 'B' / 'y', 'y')
+    b_u = _add_worktree(b, tmp / 'B-u', '_')
+    note = f'note: {b_x} is outside the worktree layout, which puts x at {tmp}/{WORKTREES}/B/x'
 
     _same(_captured(tree, a, b, 'main', False), (0, [str(b)]), 'the main checkout')
-    _same(_captured(tree, a, b, 'x', False), (0, [str(b_x)]), 'a worktree')
+    _same(_captured(tree, a, b, 'x', False), (0, [str(b_x), note]), 'a worktree outside the layout')
+    _same(_captured(tree, a, b, 'y', False), (0, [str(b_y)]), 'a worktree in the layout')
+    _same(_captured(tree, a, b, '_', False),
+          (0, [str(b_u), f'note: {b_u} is outside the worktree layout, which has no folder for _']), 'no folder')
     _same(_captured(tree, a, b_x, 'main', False), (0, [str(b)]), 'named by its worktree')
-    _same(_captured(tree, a, b, 'x', True), (0, [str(b_x)]), 'nothing to create')
+    _same(_captured(tree, a, b, 'x', True), (0, [str(b_x), note]), 'nothing to create')
+    _sh(b, 'checkout', '-q', '-b', 'q')
+    _same(_captured(tree, a, b, 'q', False), (0, [str(b)]), 'a branch in place in the main checkout')
+
+    folder = tmp / WORKTREES / 'B'
+    (tmp / 'link').symlink_to(folder / 'y')
+    cases = {
+        'at its place': (folder / 'y', 'y', False),
+        'through a symlink': (tmp / 'link', 'y', False),
+        'beside the clone': (tmp / 'B-y', 'y', True),
+        "at another branch's place": (folder / 'y', 'x', True),
+        'detached in the folder': (folder / 'anything', None, False),
+        'detached elsewhere': (tmp / 'elsewhere', None, True),
+        'detached deeper in the folder': (folder / 'a' / 'b', None, True),
+        'no slug in the folder': (folder / 'x', '_', False),
+        'no slug elsewhere': (tmp / 'x', '_', True),
+        'the main checkout': (b, 'q', False),
+    }
+    _same({label: outside_layout(b, Worktree(path, branch, None, False)) for label, (path, branch, _) in cases.items()},
+          {label: outside for label, (_path, _branch, outside) in cases.items()}, 'outside the layout')
 
 
 def _case_tree_creates_a_plan_only_worktree_when_asked(tmp: Path) -> None:
     a = _git_repo(tmp / 'A', 'main')
     b = _git_repo(tmp / 'B', 'main')
-    for name in ('y', 'z', 'w', 'feat/One_2'):
+    for name in ('y', 'w', 'feat/One_2'):
         _sh(b, 'branch', name)
     hook = b / '.git' / 'hooks' / 'post-checkout'
     _write(hook, '#!/bin/sh\ntouch "$PWD/HOOK-RAN"\n')
     hook.chmod(0o755)
-    b_y = tmp / 'B-y'
+    layout = tmp / WORKTREES / 'B'
+    b_y = layout / 'y'
 
     _same(_captured(tree, a, b, 'y', False),
           (3, [f'would create: {b_y} on y. Ask, then run again with --create.']), 'would create')
-    _same((b_y.exists(), len(worktrees(b))), (False, 1), 'nothing created')
+    _same(((tmp / WORKTREES).exists(), len(worktrees(b))), (False, 1), 'nothing created')
     _same(_captured(tree, a, b, 'y', True), (0, [
         str(b_y),
         f'created: plan-only worktree of {b} on y; commit there. While it holds y, git checks y out nowhere else: '
         f'git -C {b} worktree remove {b_y}',
+        'trust: git run by another account refuses this tree, which this account owns, unless that account '
+        f'trusts it: git config --global --add safe.directory {b_y}',
     ]), 'create')
     _same(current_branch(b_y), 'y', 'branch of the new worktree')
-    marker = b / '.git' / 'worktrees' / 'B-y' / 'plan-only'
+    marker = b / '.git' / 'worktrees' / 'y' / 'plan-only'
     _same(marker.is_file() and marker.read_text(encoding='utf-8').startswith(
         'plan-only worktree made by plan_links.py --tree on '), True, 'marker')
     _same((b_y / 'HOOK-RAN').exists(), False, 'no hook ran')
     _same(_captured(tree, a, b, 'y', False), (0, [str(b_y)]), 'found once made')
     _same(_captured(tree, a, b, 'feat/One_2', False),
-          (3, [f'would create: {tmp}/B-feat-one-2 on feat/One_2. Ask, then run again with --create.']), 'slug')
-
-    tmp.chmod(0o500)
-    try:
-        code, lines = _captured(tree, a, b, 'z', True)
-    finally:
-        tmp.chmod(0o700)
-    _same((code, len(lines), lines[0].startswith('refused: git worktree add failed: fatal:')), (1, 1, True),
-          f'worktree add fails: {lines}')
-    _same((tmp / 'B-z').exists(), False, 'nothing left')
+          (3, [f'would create: {layout}/feat-one-2 on feat/One_2. Ask, then run again with --create.']), 'slug')
 
     marker_name = globals()['MARKER']
     globals()['MARKER'] = 'missing/plan-only'
@@ -1828,13 +2045,91 @@ def _case_tree_creates_a_plan_only_worktree_when_asked(tmp: Path) -> None:
     finally:
         globals()['MARKER'] = marker_name
     _same((code, len(lines),
-           lines[0].startswith(f'refused: {tmp}/B-w was created, but its plan-only marker could not be written: ')),
+           lines[0].startswith(f'refused: {layout}/w was created, but its plan-only marker could not be written: ')),
           (1, 1, True), f'marker fails: {lines}')
     _same(_captured(tree, a, b, 'w', False), (0, [
-        f'{tmp}/B-w',
+        f'{layout}/w',
         f'removable: {b_y} (y): clean, merged into main; git -C {b} worktree remove {b_y}',
     ]), 'a worktree without its marker')
     _same(_captured(report_worktrees, [b])[1][0], f'{b}: 1 plan-only worktrees', 'only the marked one')
+
+
+def _case_tree_creates_the_layout_folders(tmp: Path) -> None:
+    a = _git_repo(tmp / 'A', 'main')
+    proj = tmp / 'proj'
+    b = _git_repo(proj / 'B', 'main')
+    for name in ('y', 'z'):
+        _sh(b, 'branch', name)
+    proj.chmod(0o2750)
+    folders = [proj / WORKTREES, proj / WORKTREES / 'B']
+    real_chown = os.chown
+    calls = []
+
+    def recorded(path, uid, gid):
+        calls.append((Path(path), uid, gid))
+        real_chown(path, uid, gid)
+
+    os.chown = recorded
+    try:
+        code = _captured(tree, a, b, 'y', True)[0]
+    finally:
+        os.chown = real_chown
+    _same(code, 0, 'create')
+    _same([folder.stat().st_mode & 0o7777 for folder in folders], [0o2750, 0o2750], 'the containing mode')
+    _same(calls, [(folder, -1, proj.stat().st_gid) for folder in folders], 'the containing group')
+    folders[1].chmod(0o700)
+    _same(_captured(tree, a, b, 'z', True)[0], 0, 'create beside')
+    _same(folders[1].stat().st_mode & 0o7777, 0o700, 'a folder already there keeps its mode')
+
+    c = _git_repo(tmp / 'C', 'main')
+    _sh(c, 'branch', 'u')
+    admin = c / '.git' / 'worktrees'
+    admin.mkdir()
+    admin.chmod(0o500)
+    try:
+        result = _captured(tree, a, c, 'u', True)
+    finally:
+        admin.chmod(0o700)
+    _same(result, (1, ["refused: git worktree add failed: fatal: could not create directory of "
+                       "'.git/worktrees/u': Permission denied"]), 'git fails')
+    _same((tmp / WORKTREES).exists(), False, 'the folders it made are removed')
+
+    d = _git_repo(tmp / 'locked' / 'D', 'main')
+    _sh(d, 'branch', 'v')
+    (tmp / 'locked').chmod(0o500)
+    try:
+        result = _captured(tree, a, d, 'v', True)
+    finally:
+        (tmp / 'locked').chmod(0o700)
+    _same(result, (1, [f'refused: {tmp}/locked/{WORKTREES} could not be created: Permission denied']), 'no folder')
+
+    half = tmp / 'half'
+    e = _git_repo(half / 'E', 'main')
+    _sh(e, 'branch', 'v')
+
+    def refused(path, uid, gid):
+        if Path(path).name == 'E':
+            raise PermissionError(1, 'Operation not permitted', str(path))
+        real_chown(path, uid, gid)
+
+    os.chown = refused
+    try:
+        code = _captured(tree, a, e, 'v', True)[0]
+    finally:
+        os.chown = real_chown
+    _same((code, (half / WORKTREES / 'E' / 'v').is_dir(), (half / WORKTREES / 'E').stat().st_mode & 0o7777),
+          (0, True, half.stat().st_mode & 0o7777), 'a refused chown keeps the folder, with the mode')
+
+    full = tmp / 'full'
+    _write(full / 'kept.txt', '')
+    _remove_folders([full, tmp / 'absent'])
+    _same(full.is_dir(), True, 'a folder that cannot go is left')
+
+    f = _git_repo(tmp / 'filed' / 'F', 'main')
+    _sh(f, 'branch', 'v')
+    _write(tmp / 'filed' / WORKTREES, '')
+    _same(_captured(tree, a, f, 'v', True),
+          (1, [f'refused: {tmp}/filed/{WORKTREES} could not be created: File exists']), 'a file in the way')
 
 
 def _case_tree_tracks_a_remote_only_branch(tmp: Path) -> None:
@@ -1849,7 +2144,7 @@ def _case_tree_tracks_a_remote_only_branch(tmp: Path) -> None:
     _sh(b, 'fetch', '-q', 'other')
 
     _same(_captured(tree, a, b, 'r', False), (3, [
-        f'would create: {tmp}/B-r on r, a new local branch tracking origin/r as of the last fetch. '
+        f'would create: {tmp}/{WORKTREES}/B/r on r, a new local branch tracking origin/r as of the last fetch. '
         'Ask, then run again with --create.',
     ]), 'would create')
     _same(_captured(tree, a, b, 'r', True)[0], 0, 'create')
@@ -1859,7 +2154,8 @@ def _case_tree_tracks_a_remote_only_branch(tmp: Path) -> None:
           'two remotes')
     _same(_captured(tree, a, b, 'nope', True), (1, [f'refused: nope is no branch of {b}, local or remote-tracking']),
           'no branch')
-    _same([(tmp / 'B-s').exists(), (tmp / 'B-nope').exists()], [False, False], 'nothing created')
+    _same([(tmp / WORKTREES / 'B' / 's').exists(), (tmp / WORKTREES / 'B' / 'nope').exists()], [False, False],
+          'nothing created')
 
 
 def _case_tree_refusals(tmp: Path) -> None:
@@ -1875,23 +2171,35 @@ def _case_tree_refusals(tmp: Path) -> None:
         _same(_captured(tree, a, repo, 'main', False), (1, [f'refused: {repo} is not the root of a git work tree']),
               repo.name)
     _same(_captured(tree, a, b, '_', False), (1, ['refused: branch _ gives no folder name']), 'empty slug')
-    (tmp / 'B-p').mkdir()
-    _same(_captured(tree, a, b, 'p', False), (1, [f'refused: {tmp}/B-p exists and does not have p checked out']),
-          'a plain folder')
-    _add_worktree(b, tmp / 'B-q', 'z')
-    _same(_captured(tree, a, b, 'q', False), (1, [f'refused: {tmp}/B-q exists and does not have q checked out']),
+    (tmp / WORKTREES / 'B' / 'p').mkdir(parents=True)
+    _same(_captured(tree, a, b, 'p', False),
+          (1, [f'refused: {tmp}/{WORKTREES}/B/p exists and does not have p checked out']), 'a plain folder')
+    _add_worktree(b, tmp / WORKTREES / 'B' / 'q', 'z')
+    _same(_captured(tree, a, b, 'q', False),
+          (1, [f'refused: {tmp}/{WORKTREES}/B/q exists and does not have q checked out']),
           'a worktree on another branch')
     shutil.rmtree(_add_worktree(b, tmp / 'elsewhere' / 'w', 'w'))
     _same(_captured(tree, a, b, 'w', False), (1, [
         f'refused: w is held by {tmp}/elsewhere/w, a worktree whose folder is missing: git -C {b} worktree prune',
     ]), 'a missing folder')
+    inner = _git_repo(tmp / 'nest' / WORKTREES, 'main')
+    _sh(inner, 'branch', 'p')
+    _same(_captured(tree, a, inner, 'p', False),
+          (1, [f'refused: the layout puts p at {inner}/{WORKTREES}/p, inside the git work tree {inner}']),
+          'a main checkout named worktrees')
+    beside = _git_repo(tmp / 'side' / 'S', 'main')
+    _sh(beside, 'branch', 'p')
+    other = _git_repo(tmp / 'side' / WORKTREES, 'main')
+    _same(_captured(tree, a, beside, 'p', False),
+          (1, [f'refused: the layout puts p at {other}/S/p, inside the git work tree {other}']),
+          'a repo named worktrees beside it')
     _same(len(worktrees(b)), 3, 'nothing created')
 
 
 def _case_tree_follows_the_pairing(tmp: Path) -> None:
     b = _git_repo(tmp / 'B', 'main')
     _sh(b, 'branch', 'x')
-    b_x = _add_worktree(b, tmp / 'B-x', 'x')
+    b_x = _add_worktree(b, tmp / WORKTREES / 'B' / 'x', 'x')
     a = _git_repo(tmp / 'A', 'main', {'plans/a.md': ''})
     _sh(a, 'branch', 'a1')
     _sh(a, 'branch', 'a2')
@@ -1935,36 +2243,38 @@ def _case_worktrees_report(tmp: Path) -> None:
         _sh(b, 'branch', name)
     for name in ('m', 'd', 'c', 'k', 'e', 'u'):
         _same(_captured(tree, a, b, name, True)[0], 0, f'create {name}')
-    _write(tmp / 'B-d' / 'new.txt', '')
-    _write(tmp / 'B-c' / 'c.txt', 'c')
-    _commit(tmp / 'B-c')
-    _write(tmp / 'B-u' / 'u.txt', 'u')
-    _commit(tmp / 'B-u')
+    layout = tmp / WORKTREES / 'B'
+    _write(layout / 'd' / 'new.txt', '')
+    _write(layout / 'c' / 'c.txt', 'c')
+    _commit(layout / 'c')
+    _write(layout / 'u' / 'u.txt', 'u')
+    _commit(layout / 'u')
     _sh(origin, 'branch', '-D', 'u')
     _sh(b, 'fetch', '-q', '--prune')
-    shutil.rmtree(tmp / 'B-k')
-    _sh(tmp / 'B-e', 'checkout', '-q', '--detach')
+    shutil.rmtree(layout / 'k')
+    _sh(layout / 'e', 'checkout', '-q', '--detach')
+    _sh(b, 'worktree', 'move', str(layout / 'c'), str(tmp / 'B-c'))
     _add_worktree(b, tmp / 'B-n', 'n')
     plain = tmp / 'plain'
     plain.mkdir()
 
     _same(_captured(report_worktrees, [b, plain]), (1, [
         f'{b}: 6 plan-only worktrees',
-        f'  {tmp}/B-c (c): clean',
-        f'  {tmp}/B-d (d): 1 uncommitted',
-        f'  {tmp}/B-e (no branch): clean, on no branch; remove: git -C {b} worktree remove {tmp}/B-e',
-        f'  {tmp}/B-k (k): folder missing; prune: git -C {b} worktree prune',
-        f'  {tmp}/B-m (m): clean, merged into main; remove: git -C {b} worktree remove {tmp}/B-m',
-        f'  {tmp}/B-u (u): clean, upstream gone; remove: git -C {b} worktree remove {tmp}/B-u',
+        f'  {tmp}/B-c (c): clean; outside the layout',
+        f'  {layout}/d (d): 1 uncommitted',
+        f'  {layout}/e (no branch): clean, on no branch; remove: git -C {b} worktree remove {layout}/e',
+        f'  {layout}/k (k): folder missing; prune: git -C {b} worktree prune',
+        f'  {layout}/m (m): clean, merged into main; remove: git -C {b} worktree remove {layout}/m',
+        f'  {layout}/u (u): clean, upstream gone; remove: git -C {b} worktree remove {layout}/u',
         f'refused: {plain} is not the root of a git work tree',
-        'plan_links: 1 repos, 6 plan-only worktrees, 4 removable',
+        'plan_links: 1 repos, 6 plan-only worktrees, 4 removable, 1 outside the layout',
     ]), 'report')
     _same(_captured(tree, a, b, 'main', False), (0, [
         str(b),
-        f'removable: {tmp}/B-e (no branch): clean, on no branch; git -C {b} worktree remove {tmp}/B-e',
-        f'removable: {tmp}/B-k (k): folder missing; git -C {b} worktree prune',
-        f'removable: {tmp}/B-m (m): clean, merged into main; git -C {b} worktree remove {tmp}/B-m',
-        f'removable: {tmp}/B-u (u): clean, upstream gone; git -C {b} worktree remove {tmp}/B-u',
+        f'removable: {layout}/e (no branch): clean, on no branch; git -C {b} worktree remove {layout}/e',
+        f'removable: {layout}/k (k): folder missing; git -C {b} worktree prune',
+        f'removable: {layout}/m (m): clean, merged into main; git -C {b} worktree remove {layout}/m',
+        f'removable: {layout}/u (u): clean, upstream gone; git -C {b} worktree remove {layout}/u',
     ]), 'tree repeats the removable ones')
 
 
@@ -2080,12 +2390,17 @@ SELFTEST_CASES = (
     _case_resolve,
     _case_report_and_emit_allowlist,
     _case_folder_slug_table,
+    _case_layout_path_vectors,
     _case_read_pairs,
     _case_a_linked_worktree_names_its_main_repo,
+    _case_a_tree_in_the_layout_finds_the_repos_beside_its_main_checkout,
+    _case_links_from_a_tree_are_followed_from_its_main_checkout,
+    _case_a_path_into_a_worktree_names_its_repo,
     _case_worktrees_and_trunks,
     _case_branch_names,
     _case_tree_finds_the_tree_holding_the_branch,
     _case_tree_creates_a_plan_only_worktree_when_asked,
+    _case_tree_creates_the_layout_folders,
     _case_tree_tracks_a_remote_only_branch,
     _case_tree_refusals,
     _case_tree_follows_the_pairing,
@@ -2099,6 +2414,13 @@ SELFTEST_CASES = (
 class _Parser(argparse.ArgumentParser):
     def error(self, message: str):
         self.exit(2, f'plan_links.py: {message}; usage: {USAGE}\n')
+
+
+def repo_argument(here: Path, text: str) -> Path:
+    path = (here / text).resolve()
+    if '/' in text or path.is_dir():
+        return path
+    return (sibling_dir(here) / text).resolve()
 
 
 def main(argv: list[str] | None = None, root: Path | None = None) -> int:
@@ -2132,10 +2454,11 @@ def main(argv: list[str] | None = None, root: Path | None = None) -> int:
 
     if args.selftest:
         return selftest()
-    if args.tree:
-        return tree((root or Path.cwd()).resolve(), Path(args.tree).resolve(), args.branch, args.create)
-    if args.worktrees:
-        return report_worktrees([Path(path).resolve() for path in args.worktrees])
+    if args.tree or args.worktrees:
+        here = (root or Path.cwd()).resolve()
+        if args.tree:
+            return tree(here, repo_argument(here, args.tree), args.branch, args.create)
+        return report_worktrees([repo_argument(here, text) for text in args.worktrees])
     root = root or repo_root()
     if args.check:
         return check(root, args.only)
